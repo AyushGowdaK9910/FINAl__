@@ -26,12 +26,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: feature/ayush/frontend
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+        run: npm install
 
       - name: Run linter
         working-directory: feature/ayush/frontend
@@ -60,12 +55,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: feature/ayush/frontend
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+        run: npm install
 
       - name: Build
         working-directory: feature/ayush/frontend
@@ -79,4 +69,3 @@ jobs:
           tags: file-converter-frontend:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
