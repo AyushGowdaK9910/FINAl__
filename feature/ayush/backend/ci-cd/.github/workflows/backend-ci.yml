@@ -26,10 +26,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
           node-version: '18'
-          cache: ''
 
       - name: Install dependencies
         working-directory: backend/base-setup
@@ -57,10 +56,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
           node-version: '18'
-          cache: ''
 
       - name: Install dependencies
         working-directory: backend/base-setup
@@ -92,10 +90,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
           node-version: '18'
-          cache: ''
 
       - name: Install dependencies
         working-directory: backend/base-setup
