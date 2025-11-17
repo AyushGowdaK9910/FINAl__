@@ -32,7 +32,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v3
+        id: npm-cache
+        with:
+          path: backend/base-setup/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('backend/base-setup/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       - name: Install dependencies
         working-directory: backend/base-setup
@@ -66,7 +74,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v3
+        id: npm-cache
+        with:
+          path: backend/base-setup/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('backend/base-setup/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       - name: Install dependencies
         working-directory: backend/base-setup
@@ -104,7 +120,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v3
+        id: npm-cache
+        with:
+          path: backend/base-setup/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('backend/base-setup/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       - name: Install dependencies
         working-directory: backend/base-setup
