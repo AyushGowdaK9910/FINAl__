@@ -4,8 +4,8 @@
 
 import express, { Application } from 'express';
 import cors from 'cors';
-import { setupSwagger } from '../../docs/swagger';
-import { setupHealthChecks } from '../../health/health-check-controller';
+import { setupSwagger } from './docs/swagger';
+import { setupHealthChecks } from './health/health-check-controller';
 
 const app: Application = express();
 
