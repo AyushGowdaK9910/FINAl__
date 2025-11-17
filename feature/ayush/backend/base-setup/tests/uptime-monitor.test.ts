@@ -14,7 +14,8 @@ describe('UptimeMonitor', () => {
   test('should initialize with start time', () => {
     const stats = monitor.getStats();
     expect(stats.startTime).toBeDefined();
-    expect(stats.startTime).toBeGreaterThan(0);
+    expect(typeof stats.startTime).toBe('string');
+    expect(new Date(stats.startTime).getTime()).toBeGreaterThan(0);
   });
 
   test('should record health checks', () => {
