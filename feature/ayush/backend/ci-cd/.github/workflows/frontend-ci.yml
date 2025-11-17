@@ -19,16 +19,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check for package-lock.json
+        id: check-lock
+        run: |
+          if [ -f feature/ayush/frontend/package-lock.json ]; then
+            echo "lockfile_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "lockfile_exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: 'feature/ayush/frontend/package-lock.json'
+          cache: ${{ steps.check-lock.outputs.lockfile_exists == 'true' && 'npm' || '' }}
+          cache-dependency-path: ${{ steps.check-lock.outputs.lockfile_exists == 'true' && 'feature/ayush/frontend/package-lock.json' || '' }}
 
       - name: Install dependencies
         working-directory: feature/ayush/frontend
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
 
       - name: Run linter
         working-directory: feature/ayush/frontend
@@ -50,16 +64,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check for package-lock.json
+        id: check-lock
+        run: |
+          if [ -f feature/ayush/frontend/package-lock.json ]; then
+            echo "lockfile_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "lockfile_exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: 'feature/ayush/frontend/package-lock.json'
+          cache: ${{ steps.check-lock.outputs.lockfile_exists == 'true' && 'npm' || '' }}
+          cache-dependency-path: ${{ steps.check-lock.outputs.lockfile_exists == 'true' && 'feature/ayush/frontend/package-lock.json' || '' }}
 
       - name: Install dependencies
         working-directory: feature/ayush/frontend
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
 
       - name: Build
         working-directory: feature/ayush/frontend
