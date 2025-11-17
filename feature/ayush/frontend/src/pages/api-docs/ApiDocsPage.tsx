@@ -11,7 +11,7 @@ import React, { useState, useEffect } from 'react';
 import SwaggerUI from 'swagger-ui-react';
 import 'swagger-ui-react/swagger-ui.css';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 export const ApiDocsPage: React.FC = () => {
   const [spec, setSpec] = useState<any>(null);
