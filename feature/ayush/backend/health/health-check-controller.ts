@@ -1,10 +1,17 @@
 /**
  * CON-9: Health Check Controller
  * Provides health check and uptime monitoring endpoints
+ * 
+ * Features:
+ * - Create health check controller
+ * - Add /api/health endpoint
+ * - Return service status and uptime
+ * - Add timestamp to response
  */
 
 import { Application, Request, Response } from 'express';
 
+// Track service start time for uptime calculation
 const startTime = Date.now();
 
 interface HealthStatus {
@@ -89,13 +96,15 @@ export const setupHealthChecks = (app: Application): void => {
    *             schema:
    *               $ref: '#/components/schemas/HealthResponse'
    */
+  // Basic health check endpoint - Return service status and uptime with timestamp
   app.get('/api/health', (req: Request, res: Response) => {
     const uptime = getUptime();
-    res.status(200).json({
-      status: 'ok',
+    const response = {
+      status: 'ok' as const,
       uptime,
       timestamp: new Date().toISOString(),
-    });
+    };
+    res.status(200).json(response);
   });
 
   /**
