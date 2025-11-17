@@ -20,12 +20,50 @@ setupSwagger(app);
 setupHealthChecks(app);
 
 // Basic route
-app.get('/', (req, res) => {
+/**
+ * @swagger
+ * /:
+ *   get:
+ *     summary: Get API information
+ *     description: Returns basic API information and available endpoints
+ *     tags: [General]
+ *     responses:
+ *       200:
+ *         description: API information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: File Converter API
+ *                 version:
+ *                   type: string
+ *                   example: 1.0.0
+ *                 docs:
+ *                   type: string
+ *                   example: /api-docs
+ *                 health:
+ *                   type: string
+ *                   example: /api/health
+ *                 status:
+ *                   type: string
+ *                   example: running
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+app.get('/', (req: Request, res: Response) => {
   res.json({
     message: 'File Converter API',
     version: '1.0.0',
     docs: '/api-docs',
     health: '/api/health',
+    status: 'running',
   });
 });
 
