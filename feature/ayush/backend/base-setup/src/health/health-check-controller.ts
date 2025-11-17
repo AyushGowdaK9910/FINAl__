@@ -4,6 +4,7 @@
  */
 
 import { Application, Request, Response } from 'express';
+import { promises as fs } from 'fs';
 
 const startTime = Date.now();
 
@@ -47,7 +48,6 @@ const checkServices = async (): Promise<HealthStatus['services']> => {
 
   // Check storage (mock - implement actual check)
   try {
-    const fs = require('fs').promises;
     await fs.access('./uploads');
     services.storage = 'ok';
   } catch {
