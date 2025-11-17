@@ -7,6 +7,7 @@ import { Request, Response } from 'express';
 import fs from 'fs/promises';
 import path from 'path';
 import { logger } from '../utils/logger';
+import { LogRetentionService } from '../services/logRetention.service';
 
 const logDir = path.join(process.cwd(), 'logs');
 
@@ -183,6 +184,39 @@ export class LogsController {
       res.status(500).json({
         success: false,
         error: 'Failed to search logs',
+      });
+    }
+  }
+
+  /**
+   * Get retention statistics
+   * CON-11: Returns retention statistics including total logs, archived logs, and pending archival counts
+   */
+  async getRetentionStats(req: Request, res: Response): Promise<void> {
+    try {
+      const retentionService = new LogRetentionService({
+        retentionDays: parseInt(process.env.LOG_RETENTION_DAYS || '365', 10),
+        logDirectory: logDir,
+      });
+
+      const stats = await retentionService.getRetentionStats();
+
+      res.json({
+        success: true,
+        stats: {
+          totalLogs: stats.totalLogs,
+          archivedLogs: stats.archivedLogs,
+          logsToArchive: stats.logsToArchive,
+          retentionDays: stats.retentionDays,
+          retentionPeriod: `${stats.retentionDays} days`,
+          archiveDirectory: path.join(logDir, 'archived'),
+        },
+      });
+    } catch (error) {
+      logger.error('Failed to get retention stats', { error });
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve retention statistics',
       });
     }
   }
