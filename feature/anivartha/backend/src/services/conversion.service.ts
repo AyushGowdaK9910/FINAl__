@@ -179,5 +179,15 @@ export class ConversionService {
   cleanup(): void {
     this.processPool.clear();
   }
+
+  /**
+   * Get conversion progress (for progress tracking)
+   * Can be extended to provide real-time progress updates
+   */
+  getProgress(conversionId: string): number {
+    // In a real implementation, this would track actual progress
+    // For now, return a placeholder
+    return 0;
+  }
 }
 
