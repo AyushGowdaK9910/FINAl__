@@ -4,8 +4,8 @@
 
 import express, { Application } from 'express';
 import cors from 'cors';
-import { setupSwagger } from '../docs/swagger';
-import { setupHealthChecks } from '../health/health-check-controller';
+import { setupSwagger } from '../../docs/swagger';
+import { setupHealthChecks } from '../../health/health-check-controller';
 
 const app: Application = express();
 
@@ -20,7 +20,7 @@ setupSwagger(app);
 setupHealthChecks(app);
 
 // Basic route
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.json({
     message: 'File Converter API',
     version: '1.0.0',
