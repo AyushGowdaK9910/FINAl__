@@ -116,9 +116,12 @@ export class UploadService {
 
   /**
    * Save uploaded file metadata
+   * Tracks upload metadata and generates unique file ID
    */
   async saveFileMetadata(file: Express.Multer.File): Promise<UploadResult> {
     const fileId = uuidv4();
+    const uploadTime = Date.now();
+    
     const result: UploadResult = {
       id: fileId,
       filename: file.filename,
@@ -132,9 +135,19 @@ export class UploadService {
       fileId,
       originalName: file.originalname,
       size: file.size,
+      mimeType: file.mimetype,
+      uploadTime: new Date(uploadTime).toISOString(),
     });
 
     return result;
+  }
+
+  /**
+   * Track upload progress
+   * Can be extended to support real-time progress updates
+   */
+  trackUploadProgress(fileId: string, progress: number): void {
+    logger.debug('Upload progress', { fileId, progress: `${progress}%` });
   }
 
   /**

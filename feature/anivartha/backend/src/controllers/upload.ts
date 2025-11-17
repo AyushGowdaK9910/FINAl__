@@ -24,6 +24,8 @@ export class UploadController {
         return;
       }
 
+      const uploadStartTime = Date.now();
+      
       logger.info('File upload received', {
         originalName: req.file.originalname,
         size: req.file.size,
@@ -31,10 +33,14 @@ export class UploadController {
       });
 
       const result = await uploadService.saveFileMetadata(req.file);
+      
+      const uploadDuration = Date.now() - uploadStartTime;
 
       logger.info('File upload completed', {
         fileId: result.id,
         filename: result.filename,
+        duration: `${uploadDuration}ms`,
+        uploadSpeed: `${(req.file.size / uploadDuration * 1000 / 1024).toFixed(2)} KB/s`,
       });
 
       res.status(200).json({
