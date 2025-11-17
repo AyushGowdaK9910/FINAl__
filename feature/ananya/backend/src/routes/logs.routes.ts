@@ -79,5 +79,17 @@ router.get('/:filename', logsController.getLogContent.bind(logsController));
  */
 router.get('/search/query', logsController.searchLogs.bind(logsController));
 
+/**
+ * @swagger
+ * /api/logs/retention/stats:
+ *   get:
+ *     summary: Get log retention statistics
+ *     tags: [Logs]
+ *     responses:
+ *       200:
+ *         description: Retention statistics
+ */
+router.get('/retention/stats', logsController.getRetentionStats.bind(logsController));
+
 export default router;
 
