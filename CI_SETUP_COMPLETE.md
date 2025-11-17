@@ -10,6 +10,7 @@ All CI/CD workflows have been configured and are ready to run. All required lock
 
 ### 1. ✅ Lockfiles Generated
 - **Backend:** `feature/ayush/backend/base-setup/package-lock.json` (240 KB)
+  - **Note**: CI/CD pipeline now verifies package.json exists before using this path
 - **Frontend:** `feature/ayush/frontend/package-lock.json` (242 KB)
 - Both files are committed and pushed to the repository
 

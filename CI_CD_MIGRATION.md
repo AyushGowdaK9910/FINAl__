@@ -86,11 +86,13 @@ The pipeline automatically detects:
 
 ### Feature Branch Layout:
 - `feature/ayush/frontend` → Frontend
-- `feature/ayush/backend/base-setup` → Backend (special case)
+- `feature/ayush/backend/base-setup` → Backend (detected by checking for package.json)
 - `feature/ananya/frontend` → Frontend
 - `feature/ananya/backend` → Backend
 - `feature/anivartha/frontend` → Frontend
 - `feature/anivartha/backend` → Backend
+
+**Note**: The pipeline now verifies `package.json` exists before using paths, ensuring robust detection.
 
 ---
 
