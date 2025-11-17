@@ -87,10 +87,17 @@ export class FileValidationService {
         errors.push('File is empty');
       }
 
-      // Detect actual file type
+      // Detect actual file type using file-type library for accurate MIME detection
       const fileType = await fileTypeFromFile(filePath);
       const detectedMimeType = fileType?.mime;
       const detectedExtension = fileType?.ext;
+
+      logger.debug('File type detection', {
+        filePath,
+        originalMimeType,
+        detectedMimeType,
+        detectedExtension,
+      });
 
       // Validate MIME type
       if (originalMimeType) {
@@ -100,16 +107,25 @@ export class FileValidationService {
       }
 
       if (detectedMimeType) {
-        if (!this.allowedMimeTypes.includes(detectedMimeType)) {
-          errors.push(`Detected MIME type ${detectedMimeType} is not allowed`);
-        }
-
-        // Check if declared MIME type matches detected
+        // Compare declared vs detected MIME types for mismatch detection
         if (originalMimeType && originalMimeType !== detectedMimeType) {
           errors.push(
             `MIME type mismatch: declared ${originalMimeType}, detected ${detectedMimeType}`
           );
+          logger.warn('MIME type mismatch detected', {
+            filePath,
+            declared: originalMimeType,
+            detected: detectedMimeType,
+          });
         }
+
+        // Validate detected MIME type against allowed list
+        if (!this.allowedMimeTypes.includes(detectedMimeType)) {
+          errors.push(`Detected MIME type ${detectedMimeType} is not allowed`);
+        }
+      } else {
+        // If file-type library cannot detect, log warning but don't fail
+        logger.warn('Could not detect file type using file-type library', { filePath });
       }
 
       // Validate extension
