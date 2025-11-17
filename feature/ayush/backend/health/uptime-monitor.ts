@@ -1,67 +1,131 @@
 /**
- * CON-9: Uptime Monitor
- * Tracks and monitors service uptime
+ * CON-9: Uptime Monitoring Service
+ * 
+ * Features:
+ * - Implement UptimeMonitor class
+ * - Track service start time
+ * - Calculate uptime statistics
+ * - Record health check results
  */
 
+interface HealthCheckResult {
+  timestamp: number;
+  status: 'ok' | 'degraded' | 'down';
+  responseTime: number;
+}
+
+interface UptimeStatistics {
+  totalUptime: number;
+  formattedUptime: string;
+  startTime: Date;
+  currentTime: Date;
+  uptimePercentage: number;
+  totalChecks: number;
+  successfulChecks: number;
+  failedChecks: number;
+  averageResponseTime: number;
+}
+
+/**
+ * UptimeMonitor class
+ * Tracks service start time and calculates uptime statistics
+ */
 export class UptimeMonitor {
   private startTime: number;
-  private lastCheck: number;
-  private checks: number = 0;
-  private failures: number = 0;
+  private healthCheckHistory: HealthCheckResult[] = [];
+  private readonly maxHistorySize: number = 1000;
 
   constructor() {
+    // Track service start time
     this.startTime = Date.now();
-    this.lastCheck = Date.now();
   }
 
   /**
-   * Record a health check
+   * Record health check result
+   * Record health check results for statistics
    */
-  recordCheck(success: boolean): void {
-    this.checks++;
-    this.lastCheck = Date.now();
-    if (!success) {
-      this.failures++;
+  recordHealthCheck(status: 'ok' | 'degraded' | 'down', responseTime: number): void {
+    const result: HealthCheckResult = {
+      timestamp: Date.now(),
+      status,
+      responseTime,
+    };
+
+    this.healthCheckHistory.push(result);
+
+    // Keep only recent history to prevent memory issues
+    if (this.healthCheckHistory.length > this.maxHistorySize) {
+      this.healthCheckHistory.shift();
     }
   }
 
   /**
-   * Get uptime in seconds
+   * Calculate uptime statistics
+   * Calculate uptime statistics including percentage and formatted display
    */
-  getUptime(): number {
-    return Math.floor((Date.now() - this.startTime) / 1000);
-  }
+  getStatistics(): UptimeStatistics {
+    const currentTime = Date.now();
+    const totalUptime = Math.floor((currentTime - this.startTime) / 1000);
 
-  /**
-   * Get uptime percentage
-   */
-  getUptimePercentage(): number {
-    if (this.checks === 0) return 100;
-    return ((this.checks - this.failures) / this.checks) * 100;
-  }
+    // Format uptime
+    const hours = Math.floor(totalUptime / 3600);
+    const minutes = Math.floor((totalUptime % 3600) / 60);
+    const seconds = totalUptime % 60;
+    const formattedUptime = `${hours}h ${minutes}m ${seconds}s`;
 
-  /**
-   * Get statistics
-   */
-  getStats() {
+    // Calculate statistics from health check history
+    const totalChecks = this.healthCheckHistory.length;
+    const successfulChecks = this.healthCheckHistory.filter(
+      (check) => check.status === 'ok'
+    ).length;
+    const failedChecks = totalChecks - successfulChecks;
+
+    // Calculate uptime percentage (based on successful checks)
+    const uptimePercentage =
+      totalChecks > 0 ? (successfulChecks / totalChecks) * 100 : 100;
+
+    // Calculate average response time
+    const averageResponseTime =
+      this.healthCheckHistory.length > 0
+        ? this.healthCheckHistory.reduce((sum, check) => sum + check.responseTime, 0) /
+          this.healthCheckHistory.length
+        : 0;
+
     return {
-      uptime: this.getUptime(),
-      uptimePercentage: this.getUptimePercentage(),
-      totalChecks: this.checks,
-      failures: this.failures,
-      successRate: this.checks > 0 ? ((this.checks - this.failures) / this.checks) * 100 : 100,
-      startTime: new Date(this.startTime).toISOString(),
-      lastCheck: new Date(this.lastCheck).toISOString(),
+      totalUptime,
+      formattedUptime,
+      startTime: new Date(this.startTime),
+      currentTime: new Date(currentTime),
+      uptimePercentage: Math.round(uptimePercentage * 100) / 100,
+      totalChecks,
+      successfulChecks,
+      failedChecks,
+      averageResponseTime: Math.round(averageResponseTime * 100) / 100,
     };
   }
 
   /**
-   * Reset monitor
+   * Get service start time
+   */
+  getStartTime(): Date {
+    return new Date(this.startTime);
+  }
+
+  /**
+   * Get current uptime in seconds
+   */
+  getCurrentUptime(): number {
+    return Math.floor((Date.now() - this.startTime) / 1000);
+  }
+
+  /**
+   * Reset monitor (for testing purposes)
    */
   reset(): void {
     this.startTime = Date.now();
-    this.checks = 0;
-    this.failures = 0;
+    this.healthCheckHistory = [];
   }
 }
 
+// Export singleton instance
+export const uptimeMonitor = new UptimeMonitor();
