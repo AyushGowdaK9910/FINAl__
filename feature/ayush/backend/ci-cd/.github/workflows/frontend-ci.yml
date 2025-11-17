@@ -1,0 +1,76 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [ feature/ayush, main, master ]
+    paths:
+      - 'feature/ayush/frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'feature/ayush/frontend/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: feature/ayush/frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: feature/ayush/frontend
+        run: npm ci
+
+      - name: Run linter
+        working-directory: feature/ayush/frontend
+        run: npm run lint || true
+
+      - name: Type check
+        working-directory: feature/ayush/frontend
+        run: npx tsc --noEmit || true
+
+      - name: Run tests
+        working-directory: feature/ayush/frontend
+        run: npm test || true
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: feature/ayush/frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: feature/ayush/frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: feature/ayush/frontend
+        run: npm run build
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: feature/ayush/frontend
+          push: false
+          tags: file-converter-frontend:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+

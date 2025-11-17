@@ -1,0 +1,90 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ feature/ayush, main, master ]
+    paths:
+      - 'feature/ayush/backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'feature/ayush/backend/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: feature/ayush/backend/base-setup/package-lock.json
+
+      - name: Install dependencies
+        working-directory: feature/ayush/backend/base-setup
+        run: npm ci
+
+      - name: Run linter
+        working-directory: feature/ayush/backend/base-setup
+        run: npm run lint || true
+
+      - name: Type check
+        working-directory: feature/ayush/backend/base-setup
+        run: npm run typecheck
+
+      - name: Run tests
+        working-directory: feature/ayush/backend/base-setup
+        run: npm test
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./feature/ayush/backend/base-setup/coverage/lcov.info
+          flags: backend
+          name: backend-coverage
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: feature/ayush/backend/base-setup/package-lock.json
+
+      - name: Install dependencies
+        working-directory: feature/ayush/backend/base-setup
+        run: npm ci
+
+      - name: Build
+        working-directory: feature/ayush/backend/base-setup
+        run: npm run build
+
+      - name: Validate conversion tools
+        run: |
+          which soffice || echo "LibreOffice not found"
+          which tesseract || echo "Tesseract not found"
+          which convert || echo "ImageMagick not found"
+          which gs || echo "Ghostscript not found"
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: feature/ayush/backend/base-setup
+          push: false
+          tags: file-converter-backend:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
