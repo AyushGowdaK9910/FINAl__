@@ -1,12 +1,35 @@
 /**
  * CON-4: Logs Routes
+ * Defines all log-related API endpoints with Swagger documentation
+ * Includes error handling middleware for all routes
  */
 
 import { Router } from 'express';
 import { LogsController } from '../controllers/logs.controller';
+import { logger } from '../utils/logger';
 
 const router = Router();
 const logsController = new LogsController();
+
+// Error handling middleware for log routes
+const handleRouteError = (handler: Function) => {
+  return async (req: any, res: any, next: any) => {
+    try {
+      await handler(req, res, next);
+    } catch (error) {
+      logger.error('Route error in logs routes', { 
+        error: error instanceof Error ? error.message : String(error),
+        path: req.path 
+      });
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          error: 'Internal server error',
+        });
+      }
+    }
+  };
+};
 
 /**
  * @swagger
@@ -18,7 +41,7 @@ const logsController = new LogsController();
  *       200:
  *         description: List of log files
  */
-router.get('/', logsController.getLogFiles.bind(logsController));
+router.get('/', handleRouteError(logsController.getLogFiles.bind(logsController)));
 
 /**
  * @swagger
@@ -46,7 +69,7 @@ router.get('/', logsController.getLogFiles.bind(logsController));
  *       200:
  *         description: Log file contents
  */
-router.get('/:filename', logsController.getLogContent.bind(logsController));
+router.get('/:filename', handleRouteError(logsController.getLogContent.bind(logsController)));
 
 /**
  * @swagger
@@ -77,7 +100,7 @@ router.get('/:filename', logsController.getLogContent.bind(logsController));
  *       200:
  *         description: Search results
  */
-router.get('/search/query', logsController.searchLogs.bind(logsController));
+router.get('/search/query', handleRouteError(logsController.searchLogs.bind(logsController)));
 
 /**
  * @swagger
@@ -89,7 +112,7 @@ router.get('/search/query', logsController.searchLogs.bind(logsController));
  *       200:
  *         description: Retention statistics
  */
-router.get('/retention/stats', logsController.getRetentionStats.bind(logsController));
+router.get('/retention/stats', handleRouteError(logsController.getRetentionStats.bind(logsController)));
 
 export default router;
 

@@ -1,5 +1,11 @@
 /**
  * CON-4: Log Table Component
+ * 
+ * Features:
+ * - Display log entries in a table format
+ * - Level-based filtering
+ * - Color coding for log levels
+ * - Real-time log updates
  */
 
 import React, { useState, useEffect } from 'react';
@@ -24,21 +30,25 @@ export const LogTable: React.FC<LogTableProps> = ({ filename }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [levelFilter, setLevelFilter] = useState<string>('all');
+  const [linesToShow, setLinesToShow] = useState<number>(100);
 
   useEffect(() => {
     fetchLogs();
-  }, [filename, levelFilter]);
+  }, [filename, levelFilter, linesToShow]);
 
   const fetchLogs = async () => {
     try {
       setLoading(true);
-      const params: any = { lines: 100 };
+      setError(null);
+      const params: any = { lines: linesToShow };
       if (levelFilter !== 'all') {
         params.level = levelFilter;
       }
       const response = await axios.get(`${API_URL}/api/logs/${filename}`, { params });
       if (response.data.success) {
         setLogs(response.data.logs);
+      } else {
+        setError('Failed to fetch logs');
       }
     } catch (err) {
       setError('Failed to fetch logs');
@@ -73,7 +83,7 @@ export const LogTable: React.FC<LogTableProps> = ({ filename }) => {
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-4">
+      <div className="mb-4 flex items-center gap-4 flex-wrap">
         <h3 className="text-lg font-semibold">Log Entries: {filename}</h3>
         <select
           value={levelFilter}
@@ -86,6 +96,23 @@ export const LogTable: React.FC<LogTableProps> = ({ filename }) => {
           <option value="info">Info</option>
           <option value="debug">Debug</option>
         </select>
+        <select
+          value={linesToShow}
+          onChange={(e) => setLinesToShow(parseInt(e.target.value, 10))}
+          className="border rounded px-3 py-1"
+        >
+          <option value="50">50 lines</option>
+          <option value="100">100 lines</option>
+          <option value="200">200 lines</option>
+          <option value="500">500 lines</option>
+        </select>
+        <button
+          onClick={fetchLogs}
+          disabled={loading}
+          className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
+        >
+          {loading ? 'Loading...' : 'Refresh'}
+        </button>
       </div>
 
       <div className="overflow-x-auto">
