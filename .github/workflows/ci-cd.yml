@@ -29,6 +29,12 @@ jobs:
       - name: Detect project structure
         id: detect
         run: |
+          echo "Current directory: $(pwd)"
+          echo "Repository contents:"
+          ls -la
+          echo ""
+          echo "Checking for directories..."
+          
           # Detect feature branch name
           if [[ "${{ github.ref }}" == refs/heads/feature/* ]]; then
             FEATURE_NAME=$(echo "${{ github.ref }}" | sed 's|refs/heads/feature/||')
@@ -42,46 +48,75 @@ jobs:
           
           # Check for client/frontend
           if [ -d "client" ]; then
+            echo "✅ Found: client/"
             echo "has-client=true" >> $GITHUB_OUTPUT
             echo "client-path=client" >> $GITHUB_OUTPUT
           elif [ -d "feature/ayush/frontend" ]; then
+            echo "✅ Found: feature/ayush/frontend"
             echo "has-client=true" >> $GITHUB_OUTPUT
             echo "client-path=feature/ayush/frontend" >> $GITHUB_OUTPUT
           elif [ -d "feature/ananya/frontend" ]; then
+            echo "✅ Found: feature/ananya/frontend"
             echo "has-client=true" >> $GITHUB_OUTPUT
             echo "client-path=feature/ananya/frontend" >> $GITHUB_OUTPUT
           elif [ -d "feature/anivartha/frontend" ]; then
+            echo "✅ Found: feature/anivartha/frontend"
             echo "has-client=true" >> $GITHUB_OUTPUT
             echo "client-path=feature/anivartha/frontend" >> $GITHUB_OUTPUT
           else
+            echo "⚠️ No client/frontend directory found"
             echo "has-client=false" >> $GITHUB_OUTPUT
             echo "client-path=" >> $GITHUB_OUTPUT
           fi
           
-          # Check for server/backend
+          # Check for server/backend - check base-setup first, then regular backend
           if [ -d "server" ]; then
+            echo "✅ Found: server/"
             echo "has-server=true" >> $GITHUB_OUTPUT
             echo "server-path=server" >> $GITHUB_OUTPUT
           elif [ -d "feature/ayush/backend/base-setup" ]; then
+            echo "✅ Found: feature/ayush/backend/base-setup"
             echo "has-server=true" >> $GITHUB_OUTPUT
             echo "server-path=feature/ayush/backend/base-setup" >> $GITHUB_OUTPUT
           elif [ -d "feature/ayush/backend" ]; then
+            echo "✅ Found: feature/ayush/backend (no base-setup subdirectory)"
             echo "has-server=true" >> $GITHUB_OUTPUT
             echo "server-path=feature/ayush/backend" >> $GITHUB_OUTPUT
           elif [ -d "feature/ananya/backend" ]; then
+            echo "✅ Found: feature/ananya/backend"
             echo "has-server=true" >> $GITHUB_OUTPUT
             echo "server-path=feature/ananya/backend" >> $GITHUB_OUTPUT
           elif [ -d "feature/anivartha/backend" ]; then
+            echo "✅ Found: feature/anivartha/backend"
             echo "has-server=true" >> $GITHUB_OUTPUT
             echo "server-path=feature/anivartha/backend" >> $GITHUB_OUTPUT
           else
+            echo "⚠️ No server/backend directory found"
             echo "has-server=false" >> $GITHUB_OUTPUT
             echo "server-path=" >> $GITHUB_OUTPUT
           fi
           
-          echo "Detected structure:"
-          echo "  Client: ${{ steps.detect.outputs.client-path }}"
-          echo "  Server: ${{ steps.detect.outputs.server-path }}"
+          echo ""
+          echo "=== Detection Results ==="
+          echo "Client: ${{ steps.detect.outputs.client-path }}"
+          echo "Server: ${{ steps.detect.outputs.server-path }}"
+          
+          # Verify detected paths exist
+          if [ -n "${{ steps.detect.outputs.client-path }}" ]; then
+            if [ -d "${{ steps.detect.outputs.client-path }}" ]; then
+              echo "✅ Client path verified: ${{ steps.detect.outputs.client-path }}"
+            else
+              echo "❌ Client path does not exist: ${{ steps.detect.outputs.client-path }}"
+            fi
+          fi
+          
+          if [ -n "${{ steps.detect.outputs.server-path }}" ]; then
+            if [ -d "${{ steps.detect.outputs.server-path }}" ]; then
+              echo "✅ Server path verified: ${{ steps.detect.outputs.server-path }}"
+            else
+              echo "❌ Server path does not exist: ${{ steps.detect.outputs.server-path }}"
+            fi
+          fi
 
   build:
     runs-on: ubuntu-latest
@@ -122,19 +157,34 @@ jobs:
       - name: Install server dependencies
         if: needs.detect-structure.outputs.has-server == 'true'
         run: |
-          pwd
-          ls -la
-          if [ -n "${{ needs.detect-structure.outputs.server-path }}" ] && [ -d "${{ needs.detect-structure.outputs.server-path }}" ]; then
-            cd "${{ needs.detect-structure.outputs.server-path }}"
-            pwd
-            ls -la
-            if [ -f "package-lock.json" ]; then
-              npm ci
+          echo "Current directory: $(pwd)"
+          echo "Server path from detection: ${{ needs.detect-structure.outputs.server-path }}"
+          echo "Checking if path exists..."
+          ls -la "${{ needs.detect-structure.outputs.server-path }}" 2>&1 || echo "Path does not exist"
+          
+          if [ -n "${{ needs.detect-structure.outputs.server-path }}" ]; then
+            if [ -d "${{ needs.detect-structure.outputs.server-path }}" ]; then
+              echo "✅ Directory exists, changing to: ${{ needs.detect-structure.outputs.server-path }}"
+              cd "${{ needs.detect-structure.outputs.server-path }}"
+              echo "Current directory after cd: $(pwd)"
+              echo "Contents:"
+              ls -la
+              if [ -f "package-lock.json" ]; then
+                echo "Found package-lock.json, running npm ci"
+                npm ci
+              elif [ -f "package.json" ]; then
+                echo "Found package.json, running npm install"
+                npm install
+              else
+                echo "⚠️ No package.json found in ${{ needs.detect-structure.outputs.server-path }}"
+              fi
             else
-              npm install
+              echo "❌ Directory does not exist: ${{ needs.detect-structure.outputs.server-path }}"
+              echo "Available directories:"
+              find . -type d -name "backend" -o -name "server" 2>/dev/null | head -10
             fi
           else
-            echo "⚠️ No server folder found at: ${{ needs.detect-structure.outputs.server-path }}"
+            echo "⚠️ No server path detected"
           fi
 
   test:
