@@ -10,6 +10,7 @@
  */
 
 import { Application, Request, Response } from 'express';
+import { uptimeMonitor } from './uptime-monitor';
 
 // Track service start time for uptime calculation
 const startTime = Date.now();
@@ -152,8 +153,16 @@ export const setupHealthChecks = (app: Application): void => {
    *       200:
    *         description: Uptime information
    */
+  // Uptime endpoint - Implement /api/health/uptime endpoint
+  // Add formatted uptime display, include start time and current time, calculate uptime percentage
   app.get('/api/health/uptime', (req: Request, res: Response) => {
+    const checkStartTime = Date.now();
     const uptime = getUptime();
+    const statistics = uptimeMonitor.getStatistics();
+    
+    // Record this health check
+    uptimeMonitor.recordHealthCheck('ok', Date.now() - checkStartTime);
+
     const uptimeHours = Math.floor(uptime / 3600);
     const uptimeMinutes = Math.floor((uptime % 3600) / 60);
     const uptimeSeconds = uptime % 60;
@@ -163,6 +172,13 @@ export const setupHealthChecks = (app: Application): void => {
       formatted: `${uptimeHours}h ${uptimeMinutes}m ${uptimeSeconds}s`,
       startTime: new Date(startTime).toISOString(),
       currentTime: new Date().toISOString(),
+      statistics: {
+        uptimePercentage: statistics.uptimePercentage,
+        totalChecks: statistics.totalChecks,
+        successfulChecks: statistics.successfulChecks,
+        failedChecks: statistics.failedChecks,
+        averageResponseTime: statistics.averageResponseTime,
+      },
     });
   });
 };
