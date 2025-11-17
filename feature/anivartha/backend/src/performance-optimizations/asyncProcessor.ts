@@ -1,6 +1,12 @@
 /**
  * CON-6: Async Processing Optimizations
  * Handles conversion tasks asynchronously for better performance
+ * 
+ * Features:
+ * - Task queue management with priority support
+ * - Concurrent processing with configurable limits
+ * - Task status tracking and monitoring
+ * - Event-driven architecture for real-time updates
  */
 
 import { EventEmitter } from 'events';
@@ -22,10 +28,24 @@ export class AsyncProcessor extends EventEmitter {
   private processing: Map<string, ProcessingTask> = new Map();
   private maxConcurrent: number;
   private completed: Map<string, ProcessingTask> = new Map();
+  private stats: {
+    totalProcessed: number;
+    totalFailed: number;
+    averageProcessingTime: number;
+  } = {
+    totalProcessed: 0,
+    totalFailed: 0,
+    averageProcessingTime: 0,
+  };
 
+  /**
+   * Initialize async processor
+   * @param maxConcurrent Maximum number of concurrent tasks (default: 3)
+   */
   constructor(maxConcurrent: number = 3) {
     super();
     this.maxConcurrent = maxConcurrent;
+    logger.info('AsyncProcessor initialized', { maxConcurrent });
   }
 
   /**
@@ -75,8 +95,17 @@ export class AsyncProcessor extends EventEmitter {
       task.endTime = Date.now();
       task.result = result;
       
+      const processingTime = task.endTime - (task.startTime || 0);
+      this.updateStats(true, processingTime);
+      
       this.processing.delete(task.id);
       this.completed.set(task.id, task);
+      
+      logger.info('Task completed', {
+        taskId: task.id,
+        type: task.type,
+        processingTime: `${processingTime}ms`,
+      });
       
       this.emit('taskCompleted', task);
       this.processQueue(); // Process next task
@@ -85,8 +114,18 @@ export class AsyncProcessor extends EventEmitter {
       task.endTime = Date.now();
       task.error = error instanceof Error ? error.message : String(error);
       
+      const processingTime = task.endTime - (task.startTime || 0);
+      this.updateStats(false, processingTime);
+      
       this.processing.delete(task.id);
       this.completed.set(task.id, task);
+      
+      logger.error('Task failed', {
+        taskId: task.id,
+        type: task.type,
+        error: task.error,
+        processingTime: `${processingTime}ms`,
+      });
       
       this.emit('taskFailed', task);
       this.processQueue(); // Process next task
@@ -129,6 +168,34 @@ export class AsyncProcessor extends EventEmitter {
       return task.endTime - task.startTime;
     }
     return null;
+  }
+
+  /**
+   * Update statistics
+   */
+  private updateStats(success: boolean, processingTime: number): void {
+    if (success) {
+      this.stats.totalProcessed++;
+    } else {
+      this.stats.totalFailed++;
+    }
+    
+    // Calculate running average
+    const total = this.stats.totalProcessed + this.stats.totalFailed;
+    this.stats.averageProcessingTime = 
+      (this.stats.averageProcessingTime * (total - 1) + processingTime) / total;
+  }
+
+  /**
+   * Get processor statistics
+   */
+  getStats() {
+    return {
+      ...this.stats,
+      queueLength: this.queue.length,
+      processingCount: this.processing.size,
+      completedCount: this.completed.size,
+    };
   }
 }
 
