@@ -8,23 +8,9 @@
  */
 
 import React, { useState, useRef, useCallback } from 'react';
-import axios from 'axios';
+import { apiService, UploadResult } from '../../services/api';
 import { ValidationErrors } from '../validation-errors/ValidationErrors';
 import { ProgressLoader } from '../progress-loader/ProgressLoader';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-
-interface UploadResult {
-  success: boolean;
-  file?: {
-    id: string;
-    filename: string;
-    originalName: string;
-    size: number;
-  };
-  error?: string;
-  errors?: string[];
-}
 
 export const FileUpload: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -67,37 +53,31 @@ export const FileUpload: React.FC = () => {
     setProgress(0);
     setResult(null);
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
-      const response = await axios.post<UploadResult>(`${API_URL}/api/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.total) {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
-            );
-            setProgress(percentCompleted);
-          }
-        },
+      const response = await apiService.uploadFile(file, (progressValue) => {
+        setProgress(progressValue);
       });
 
-      setResult(response.data);
-      if (response.data.success) {
+      setResult(response);
+      if (response.success) {
         setFile(null);
+        setPreview(null);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
       }
     } catch (error: any) {
+      // Enhanced error handling with detailed messages
+      const errorMessage = error.message || error.error || 'Upload failed';
+      const errorList = error.errors || [errorMessage];
+      
       setResult({
         success: false,
-        error: error.response?.data?.error || 'Upload failed',
-        errors: error.response?.data?.errors,
+        error: errorMessage,
+        errors: errorList,
       });
+      
+      console.error('Upload error:', error);
     } finally {
       setUploading(false);
       setProgress(0);
