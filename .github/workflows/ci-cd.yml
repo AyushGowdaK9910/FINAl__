@@ -98,15 +98,19 @@ jobs:
       - name: Install client dependencies
         if: needs.detect-structure.outputs.has-client == 'true'
         run: |
-          if [ -n "${{ needs.detect-structure.outputs.client-path }}" ]; then
+          pwd
+          ls -la
+          if [ -n "${{ needs.detect-structure.outputs.client-path }}" ] && [ -d "${{ needs.detect-structure.outputs.client-path }}" ]; then
             cd "${{ needs.detect-structure.outputs.client-path }}"
+            pwd
+            ls -la
             if [ -f "package-lock.json" ]; then
               npm ci
             else
               npm install
             fi
           else
-            echo "⚠️ No client folder found, skipping client install."
+            echo "⚠️ No client folder found at: ${{ needs.detect-structure.outputs.client-path }}"
           fi
 
       - uses: actions/setup-node@v4
@@ -118,15 +122,19 @@ jobs:
       - name: Install server dependencies
         if: needs.detect-structure.outputs.has-server == 'true'
         run: |
-          if [ -n "${{ needs.detect-structure.outputs.server-path }}" ]; then
+          pwd
+          ls -la
+          if [ -n "${{ needs.detect-structure.outputs.server-path }}" ] && [ -d "${{ needs.detect-structure.outputs.server-path }}" ]; then
             cd "${{ needs.detect-structure.outputs.server-path }}"
+            pwd
+            ls -la
             if [ -f "package-lock.json" ]; then
               npm ci
             else
               npm install
             fi
           else
-            echo "⚠️ No server folder found, skipping server install."
+            echo "⚠️ No server folder found at: ${{ needs.detect-structure.outputs.server-path }}"
           fi
 
   test:
@@ -143,37 +151,47 @@ jobs:
 
       - name: Install all dependencies
         run: |
+          pwd
+          ls -la
           if [ "${{ needs.detect-structure.outputs.has-client }}" == "true" ] && [ -n "${{ needs.detect-structure.outputs.client-path }}" ]; then
-            cd "${{ needs.detect-structure.outputs.client-path }}"
-            if [ -f "package-lock.json" ]; then
-              npm ci
+            if [ -d "${{ needs.detect-structure.outputs.client-path }}" ]; then
+              cd "${{ needs.detect-structure.outputs.client-path }}"
+              if [ -f "package-lock.json" ]; then
+                npm ci
+              else
+                npm install
+              fi
+              cd "${{ github.workspace }}"
             else
-              npm install
+              echo "⚠️ Client path does not exist: ${{ needs.detect-structure.outputs.client-path }}"
             fi
-            cd ../..
           fi
           if [ "${{ needs.detect-structure.outputs.has-server }}" == "true" ] && [ -n "${{ needs.detect-structure.outputs.server-path }}" ]; then
-            cd "${{ needs.detect-structure.outputs.server-path }}"
-            if [ -f "package-lock.json" ]; then
-              npm ci
+            if [ -d "${{ needs.detect-structure.outputs.server-path }}" ]; then
+              cd "${{ needs.detect-structure.outputs.server-path }}"
+              if [ -f "package-lock.json" ]; then
+                npm ci
+              else
+                npm install
+              fi
+              cd "${{ github.workspace }}"
             else
-              npm install
+              echo "⚠️ Server path does not exist: ${{ needs.detect-structure.outputs.server-path }}"
             fi
-            cd ../..
           fi
 
       - name: Run Backend Tests (Readable Output)
         if: needs.detect-structure.outputs.has-server == 'true'
         run: |
           mkdir -p artifacts
-          if [ -n "${{ needs.detect-structure.outputs.server-path }}" ]; then
+          if [ -n "${{ needs.detect-structure.outputs.server-path }}" ] && [ -d "${{ needs.detect-structure.outputs.server-path }}" ]; then
             cd "${{ needs.detect-structure.outputs.server-path }}"
             if [ -d "tests" ] || [ -f "package.json" ]; then
-              npm test -- --coverage --runInBand > ../../artifacts/server-test-report.txt 2>&1 || echo "Tests completed with warnings" >> ../../artifacts/server-test-report.txt
-              cd ../..
+              npm test -- --coverage --runInBand > "${{ github.workspace }}/artifacts/server-test-report.txt" 2>&1 || echo "Tests completed with warnings" >> "${{ github.workspace }}/artifacts/server-test-report.txt"
             else
-              echo "⚠️ No backend tests found." > artifacts/server-test-report.txt
+              echo "⚠️ No backend tests found." > "${{ github.workspace }}/artifacts/server-test-report.txt"
             fi
+            cd "${{ github.workspace }}"
           else
             echo "⚠️ No backend tests found." > artifacts/server-test-report.txt
           fi
@@ -181,14 +199,14 @@ jobs:
       - name: Run Frontend Tests (Readable Output)
         if: needs.detect-structure.outputs.has-client == 'true'
         run: |
-          if [ -n "${{ needs.detect-structure.outputs.client-path }}" ]; then
+          if [ -n "${{ needs.detect-structure.outputs.client-path }}" ] && [ -d "${{ needs.detect-structure.outputs.client-path }}" ]; then
             cd "${{ needs.detect-structure.outputs.client-path }}"
             if [ -d "tests" ] || [ -f "package.json" ]; then
-              npm test -- --coverage --runInBand > ../../artifacts/client-test-report.txt 2>&1 || echo "Tests completed with warnings" >> ../../artifacts/client-test-report.txt
-              cd ../..
+              npm test -- --coverage --runInBand > "${{ github.workspace }}/artifacts/client-test-report.txt" 2>&1 || echo "Tests completed with warnings" >> "${{ github.workspace }}/artifacts/client-test-report.txt"
             else
-              echo "⚠️ No frontend tests found." > artifacts/client-test-report.txt
+              echo "⚠️ No frontend tests found." > "${{ github.workspace }}/artifacts/client-test-report.txt"
             fi
+            cd "${{ github.workspace }}"
           else
             echo "⚠️ No frontend tests found." > artifacts/client-test-report.txt
           fi
@@ -212,17 +230,17 @@ jobs:
 
       - name: Generate Coverage Reports
         run: |
-          if [ "${{ needs.detect-structure.outputs.has-server }}" == "true" ] && [ -n "${{ needs.detect-structure.outputs.server-path }}" ]; then
+          if [ "${{ needs.detect-structure.outputs.has-server }}" == "true" ] && [ -n "${{ needs.detect-structure.outputs.server-path }}" ] && [ -d "${{ needs.detect-structure.outputs.server-path }}" ]; then
             cd "${{ needs.detect-structure.outputs.server-path }}"
             npm install
             npm test -- --coverage --coverageReporters=html || true
-            cd ../..
+            cd "${{ github.workspace }}"
           fi
-          if [ "${{ needs.detect-structure.outputs.has-client }}" == "true" ] && [ -n "${{ needs.detect-structure.outputs.client-path }}" ]; then
+          if [ "${{ needs.detect-structure.outputs.has-client }}" == "true" ] && [ -n "${{ needs.detect-structure.outputs.client-path }}" ] && [ -d "${{ needs.detect-structure.outputs.client-path }}" ]; then
             cd "${{ needs.detect-structure.outputs.client-path }}"
             npm install
             npm test -- --coverage --coverageReporters=html || true
-            cd ../..
+            cd "${{ github.workspace }}"
           fi
 
       - name: Upload Coverage Report
@@ -246,41 +264,41 @@ jobs:
 
       - name: Install Dependencies for Lint
         run: |
-          if [ "${{ needs.detect-structure.outputs.has-client }}" == "true" ] && [ -n "${{ needs.detect-structure.outputs.client-path }}" ]; then
+          if [ "${{ needs.detect-structure.outputs.has-client }}" == "true" ] && [ -n "${{ needs.detect-structure.outputs.client-path }}" ] && [ -d "${{ needs.detect-structure.outputs.client-path }}" ]; then
             cd "${{ needs.detect-structure.outputs.client-path }}"
             if [ -f "package-lock.json" ]; then
               npm ci
             else
               npm install
             fi
-            cd ../..
+            cd "${{ github.workspace }}"
           fi
-          if [ "${{ needs.detect-structure.outputs.has-server }}" == "true" ] && [ -n "${{ needs.detect-structure.outputs.server-path }}" ]; then
+          if [ "${{ needs.detect-structure.outputs.has-server }}" == "true" ] && [ -n "${{ needs.detect-structure.outputs.server-path }}" ] && [ -d "${{ needs.detect-structure.outputs.server-path }}" ]; then
             cd "${{ needs.detect-structure.outputs.server-path }}"
             if [ -f "package-lock.json" ]; then
               npm ci
             else
               npm install
             fi
-            cd ../..
+            cd "${{ github.workspace }}"
           fi
 
       - name: Run ESLint on Client
         if: needs.detect-structure.outputs.has-client == 'true'
         run: |
-          if [ -n "${{ needs.detect-structure.outputs.client-path }}" ]; then
+          if [ -n "${{ needs.detect-structure.outputs.client-path }}" ] && [ -d "${{ needs.detect-structure.outputs.client-path }}" ]; then
             cd "${{ needs.detect-structure.outputs.client-path }}"
-            npx eslint . --ext .ts,.tsx > ../../client-lint-report.txt 2>&1 || true
-            cd ../..
+            npx eslint . --ext .ts,.tsx > "${{ github.workspace }}/client-lint-report.txt" 2>&1 || true
+            cd "${{ github.workspace }}"
           fi
 
       - name: Run ESLint on Server
         if: needs.detect-structure.outputs.has-server == 'true'
         run: |
-          if [ -n "${{ needs.detect-structure.outputs.server-path }}" ]; then
+          if [ -n "${{ needs.detect-structure.outputs.server-path }}" ] && [ -d "${{ needs.detect-structure.outputs.server-path }}" ]; then
             cd "${{ needs.detect-structure.outputs.server-path }}"
-            npx eslint . --ext .ts > ../../server-lint-report.txt 2>&1 || true
-            cd ../..
+            npx eslint . --ext .ts > "${{ github.workspace }}/server-lint-report.txt" 2>&1 || true
+            cd "${{ github.workspace }}"
           fi
 
       - name: Upload Lint Reports
@@ -305,19 +323,19 @@ jobs:
       - name: Run npm audit (client)
         if: needs.detect-structure.outputs.has-client == 'true'
         run: |
-          if [ -n "${{ needs.detect-structure.outputs.client-path }}" ]; then
+          if [ -n "${{ needs.detect-structure.outputs.client-path }}" ] && [ -d "${{ needs.detect-structure.outputs.client-path }}" ]; then
             cd "${{ needs.detect-structure.outputs.client-path }}"
-            npm audit --json > ../../client-security.json 2>&1 || true
-            cd ../..
+            npm audit --json > "${{ github.workspace }}/client-security.json" 2>&1 || true
+            cd "${{ github.workspace }}"
           fi
 
       - name: Run npm audit (server)
         if: needs.detect-structure.outputs.has-server == 'true'
         run: |
-          if [ -n "${{ needs.detect-structure.outputs.server-path }}" ]; then
+          if [ -n "${{ needs.detect-structure.outputs.server-path }}" ] && [ -d "${{ needs.detect-structure.outputs.server-path }}" ]; then
             cd "${{ needs.detect-structure.outputs.server-path }}"
-            npm audit --json > ../../server-security.json 2>&1 || true
-            cd ../..
+            npm audit --json > "${{ github.workspace }}/server-security.json" 2>&1 || true
+            cd "${{ github.workspace }}"
           fi
 
       - name: Upload Security Reports
