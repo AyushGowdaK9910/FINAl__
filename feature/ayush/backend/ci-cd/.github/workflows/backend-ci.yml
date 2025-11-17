@@ -29,6 +29,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: ''
 
       - name: Install dependencies
         working-directory: backend/base-setup
@@ -59,6 +60,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: ''
 
       - name: Install dependencies
         working-directory: backend/base-setup
@@ -93,6 +95,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: ''
 
       - name: Install dependencies
         working-directory: backend/base-setup
