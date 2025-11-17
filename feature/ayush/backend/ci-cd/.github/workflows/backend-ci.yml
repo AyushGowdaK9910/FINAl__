@@ -26,16 +26,18 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-<<<<<<< Updated upstream
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: backend/base-setup/package-lock.json
 
       - name: Install dependencies
         working-directory: backend/base-setup
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
 
       - name: Run ESLint
         working-directory: backend/base-setup
@@ -54,17 +56,18 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-=======
->>>>>>> Stashed changes
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: backend/base-setup/package-lock.json
 
       - name: Install dependencies
         working-directory: backend/base-setup
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
 
       - name: Run tests with coverage
         working-directory: backend/base-setup
@@ -90,15 +93,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-<<<<<<< Updated upstream
-          cache: 'npm'
-          cache-dependency-path: backend/base-setup/package-lock.json
-=======
->>>>>>> Stashed changes
 
       - name: Install dependencies
         working-directory: backend/base-setup
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
 
       - name: Build TypeScript
         working-directory: backend/base-setup
