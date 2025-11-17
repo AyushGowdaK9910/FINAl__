@@ -14,10 +14,11 @@ export default defineConfig({
     minify: 'esbuild',
     target: 'es2020',
   },
-  resolve: {
-    alias: {
-      '@': '/src',
-    },
-  },
+  // Remove alias to avoid absolute path issues in CI
+  // resolve: {
+  //   alias: {
+  //     '@': new URL('./src', import.meta.url).pathname,
+  //   },
+  // },
 });
 
