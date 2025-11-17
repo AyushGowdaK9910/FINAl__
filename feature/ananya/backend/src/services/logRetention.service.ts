@@ -13,13 +13,28 @@ export interface RetentionConfig {
   archiveDirectory?: string;
 }
 
+/**
+ * LogRetentionService
+ * Manages log archival and retention policies
+ * Automatically archives logs older than retention period
+ * Supports configurable retention periods and archive directories
+ */
 export class LogRetentionService {
   private config: RetentionConfig;
   private retentionMs: number;
 
+  /**
+   * Initialize log retention service
+   * @param config Retention configuration including retention days and directories
+   */
   constructor(config: RetentionConfig) {
     this.config = config;
     this.retentionMs = config.retentionDays * 24 * 60 * 60 * 1000;
+    
+    // Ensure archive directory is set
+    if (!this.config.archiveDirectory) {
+      this.config.archiveDirectory = path.join(this.config.logDirectory, 'archived');
+    }
   }
 
   /**
