@@ -1,6 +1,13 @@
 /**
  * CON-1: File Upload Service
- * Handles file uploads with progress tracking
+ * Handles file uploads with progress tracking and metadata management
+ * 
+ * Features:
+ * - Multer-based file upload handling
+ * - Unique filename generation
+ * - Upload directory management
+ * - File metadata storage
+ * - Progress tracking support
  */
 
 import multer from 'multer';
@@ -9,6 +16,10 @@ import fs from 'fs/promises';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../utils/logger';
 
+/**
+ * Upload result interface
+ * Contains metadata about uploaded file
+ */
 export interface UploadResult {
   filename: string;
   originalName: string;
@@ -18,10 +29,19 @@ export interface UploadResult {
   id: string;
 }
 
+/**
+ * UploadService class
+ * Manages file upload operations with multer
+ */
 export class UploadService {
   private uploadDir: string;
   private maxFileSize: number;
 
+  /**
+   * Initialize upload service
+   * @param uploadDir Directory to store uploaded files
+   * @param maxFileSize Maximum file size in bytes (default: 50MB)
+   */
   constructor(uploadDir: string = './uploads', maxFileSize: number = 50 * 1024 * 1024) {
     this.uploadDir = uploadDir;
     this.maxFileSize = maxFileSize;
@@ -42,19 +62,31 @@ export class UploadService {
 
   /**
    * Configure multer storage
+   * Sets up disk storage with unique filename generation
+   * Ensures upload directory exists before saving files
    */
   getStorage() {
     return multer.diskStorage({
       destination: async (req, file, cb) => {
-        await this.initialize();
-        cb(null, this.uploadDir);
+        try {
+          await this.initialize();
+          cb(null, this.uploadDir);
+        } catch (error) {
+          cb(error instanceof Error ? error : new Error('Failed to initialize upload directory'), '');
+        }
       },
       filename: (req, file, cb) => {
-        const uniqueId = uuidv4();
-        const ext = path.extname(file.originalname);
-        const basename = path.basename(file.originalname, ext);
-        const filename = `${basename}_${uniqueId}${ext}`;
-        cb(null, filename);
+        try {
+          const uniqueId = uuidv4();
+          const ext = path.extname(file.originalname);
+          const basename = path.basename(file.originalname, ext)
+            .replace(/[^a-zA-Z0-9_-]/g, '_') // Sanitize filename
+            .substring(0, 100); // Limit length
+          const filename = `${basename}_${uniqueId}${ext}`;
+          cb(null, filename);
+        } catch (error) {
+          cb(error instanceof Error ? error : new Error('Failed to generate filename'), '');
+        }
       },
     });
   }
