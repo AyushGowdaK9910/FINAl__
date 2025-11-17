@@ -1,5 +1,6 @@
 /**
  * CON-3: Download Controller
+ * Handles file download endpoints with file retrieval by ID and download response headers
  */
 
 import { Request, Response } from 'express';
@@ -13,13 +14,27 @@ const uploadService = new UploadService();
 export class DownloadController {
   /**
    * Download file by ID
+   * Implements downloadFile endpoint with file existence validation
+   * Sets up download response headers for proper file delivery
    */
   async downloadFile(req: Request, res: Response): Promise<void> {
     try {
       const { fileId } = req.params;
+      
+      if (!fileId) {
+        res.status(400).json({
+          success: false,
+          error: 'File ID is required',
+        });
+        return;
+      }
+
+      logger.info('Download request received', { fileId });
+
       const file = await uploadService.getFile(fileId);
 
       if (!file) {
+        logger.warn('File not found for download', { fileId });
         res.status(404).json({
           success: false,
           error: 'File not found',
@@ -29,6 +44,7 @@ export class DownloadController {
 
       // Check if file exists on disk
       if (!fs.existsSync(file.path)) {
+        logger.error('File not found on disk', { fileId, path: file.path });
         res.status(404).json({
           success: false,
           error: 'File not found on disk',
@@ -36,7 +52,7 @@ export class DownloadController {
         return;
       }
 
-      // Set headers
+      // Set download headers
       const filename = file.originalName || file.filename;
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
