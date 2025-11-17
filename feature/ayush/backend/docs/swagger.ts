@@ -119,9 +119,10 @@ export const setupSwagger = (app: Application): void => {
     res.send(swaggerSpec);
   });
 
-  // Redoc
+  // Redoc endpoint - Integrate Redoc for alternative docs view
+  // Install redoc-express, add Redoc endpoint, configure Redoc theme, link to Swagger JSON spec
   app.get('/api-docs/redoc', redoc({
-    title: 'File Converter API',
+    title: 'File Converter API Documentation',
     specUrl: '/api-docs.json',
     nonce: '',
     redocOptions: {
@@ -131,7 +132,26 @@ export const setupSwagger = (app: Application): void => {
             main: '#32329f',
           },
         },
+        typography: {
+          fontSize: '14px',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          headings: {
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontWeight: '600',
+          },
+        },
+        sidebar: {
+          backgroundColor: '#fafafa',
+        },
       },
+      hideDownloadButton: false,
+      hideHostname: false,
+      hideSingleRequestSample: false,
+      expandResponses: '200,201',
+      jsonSampleExpandLevel: 2,
+      hideFab: false,
+      requiredPropsFirst: true,
+      sortPropsAlphabetically: false,
     },
   }));
 };
