@@ -33,6 +33,7 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
+          cache-dependency-path: feature/ayush/backend/base-setup/package-lock.json
 
       - name: Install dependencies
         working-directory: backend/base-setup
@@ -67,6 +68,7 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
+          cache-dependency-path: feature/ayush/backend/base-setup/package-lock.json
 
       - name: Install dependencies
         working-directory: backend/base-setup
@@ -105,6 +107,7 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
+          cache-dependency-path: feature/ayush/backend/base-setup/package-lock.json
 
       - name: Install dependencies
         working-directory: backend/base-setup

@@ -27,15 +27,11 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
+          cache-dependency-path: feature/ayush/backend/base-setup/package-lock.json
 
       - name: Install dependencies
         working-directory: feature/ayush/backend/base-setup
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+        run: npm ci
 
       - name: Run linter
         working-directory: feature/ayush/backend/base-setup
@@ -73,15 +69,11 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
+          cache-dependency-path: feature/ayush/backend/base-setup/package-lock.json
 
       - name: Install dependencies
         working-directory: feature/ayush/backend/base-setup
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+        run: npm ci
 
       - name: Build
         working-directory: feature/ayush/backend/base-setup
