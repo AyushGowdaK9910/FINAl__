@@ -23,12 +23,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-        env:
-          npm_config_cache: ''
+          cache: 'npm'
+          cache-dependency-path: 'feature/ayush/frontend/package-lock.json'
 
       - name: Install dependencies
         working-directory: feature/ayush/frontend
-        run: npm install
+        run: npm ci
 
       - name: Run linter
         working-directory: feature/ayush/frontend
@@ -54,12 +54,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-        env:
-          npm_config_cache: ''
+          cache: 'npm'
+          cache-dependency-path: 'feature/ayush/frontend/package-lock.json'
 
       - name: Install dependencies
         working-directory: feature/ayush/frontend
-        run: npm install
+        run: npm ci
 
       - name: Build
         working-directory: feature/ayush/frontend

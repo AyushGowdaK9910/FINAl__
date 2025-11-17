@@ -28,7 +28,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: feature/ayush/backend/base-setup
-        run: npm install
+        run: npm ci
 
       - name: Run linter
         working-directory: feature/ayush/backend/base-setup
@@ -67,7 +67,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: feature/ayush/backend/base-setup
-        run: npm install
+        run: npm ci
 
       - name: Build
         working-directory: feature/ayush/backend/base-setup
