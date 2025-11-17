@@ -1,20 +1,26 @@
+# CON-18: Backend CI Workflow
+# GitHub Actions workflow for backend CI/CD
+# Add Node.js setup action, configure lint and typecheck steps, add test execution, set up build validation
+
 name: Backend CI
 
 on:
   push:
-    branches: [ feature/ayush, main, master ]
+    branches: [main, develop]
     paths:
-      - 'feature/ayush/backend/**'
+      - 'backend/**'
       - '.github/workflows/backend-ci.yml'
   pull_request:
-    branches: [ main, master ]
+    branches: [main, develop]
     paths:
-      - 'feature/ayush/backend/**'
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
 
 jobs:
-  test:
+  lint-and-typecheck:
+    name: Lint and TypeCheck
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -24,35 +30,24 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: feature/ayush/backend/base-setup/package-lock.json
+          cache-dependency-path: backend/base-setup/package-lock.json
 
       - name: Install dependencies
-        working-directory: feature/ayush/backend/base-setup
+        working-directory: backend/base-setup
         run: npm ci
 
-      - name: Run linter
-        working-directory: feature/ayush/backend/base-setup
-        run: npm run lint || true
+      - name: Run ESLint
+        working-directory: backend/base-setup
+        run: npm run lint
 
-      - name: Type check
-        working-directory: feature/ayush/backend/base-setup
+      - name: TypeScript type check
+        working-directory: backend/base-setup
         run: npm run typecheck
 
-      - name: Run tests
-        working-directory: feature/ayush/backend/base-setup
-        run: npm test
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
-        with:
-          files: ./feature/ayush/backend/base-setup/coverage/lcov.info
-          flags: backend
-          name: backend-coverage
-
-  build:
+  test:
+    name: Test
     runs-on: ubuntu-latest
-    needs: test
-
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -62,29 +57,43 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: feature/ayush/backend/base-setup/package-lock.json
+          cache-dependency-path: backend/base-setup/package-lock.json
 
       - name: Install dependencies
-        working-directory: feature/ayush/backend/base-setup
+        working-directory: backend/base-setup
         run: npm ci
 
-      - name: Build
-        working-directory: feature/ayush/backend/base-setup
+      - name: Run tests
+        working-directory: backend/base-setup
+        run: npm test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: backend/base-setup/package-lock.json
+
+      - name: Install dependencies
+        working-directory: backend/base-setup
+        run: npm ci
+
+      - name: Build TypeScript
+        working-directory: backend/base-setup
         run: npm run build
 
-      - name: Validate conversion tools
+      - name: Verify build output
+        working-directory: backend/base-setup
         run: |
-          which soffice || echo "LibreOffice not found"
-          which tesseract || echo "Tesseract not found"
-          which convert || echo "ImageMagick not found"
-          which gs || echo "Ghostscript not found"
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: feature/ayush/backend/base-setup
-          push: false
-          tags: file-converter-backend:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
+          if [ ! -d "dist" ]; then
+            echo "Build failed: dist directory not found"
+            exit 1
+          fi
