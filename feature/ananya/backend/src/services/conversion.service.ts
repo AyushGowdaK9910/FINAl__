@@ -33,34 +33,55 @@ export class ConversionService {
   async convert(options: ConversionOptions): Promise<string> {
     const { sourceFormat, targetFormat, inputPath, ocrEnabled = false } = options;
     const outputPath = options.outputPath || this.generateOutputPath(inputPath, targetFormat);
+    let tempFiles: string[] = [];
 
     logger.info('Starting conversion', { sourceFormat, targetFormat, inputPath });
 
     try {
+      let result: string;
+
       // Document conversions using LibreOffice
       if (this.isDocumentFormat(sourceFormat) && this.isDocumentFormat(targetFormat)) {
-        return await this.convertWithLibreOffice(inputPath, outputPath, targetFormat);
+        result = await this.convertWithLibreOffice(inputPath, outputPath, targetFormat);
       }
-
       // Image conversions using ImageMagick
-      if (this.isImageFormat(sourceFormat) && this.isImageFormat(targetFormat)) {
-        return await this.convertWithImageMagick(inputPath, outputPath, targetFormat);
+      else if (this.isImageFormat(sourceFormat) && this.isImageFormat(targetFormat)) {
+        result = await this.convertWithImageMagick(inputPath, outputPath, targetFormat);
       }
-
       // PDF operations using Ghostscript
-      if (sourceFormat === 'pdf' || targetFormat === 'pdf') {
-        return await this.convertWithGhostscript(inputPath, outputPath, sourceFormat, targetFormat);
+      else if (sourceFormat === 'pdf' || targetFormat === 'pdf') {
+        result = await this.convertWithGhostscript(inputPath, outputPath, sourceFormat, targetFormat);
       }
-
       // OCR for images to text
-      if (ocrEnabled && this.isImageFormat(sourceFormat) && targetFormat === 'txt') {
-        return await this.convertWithOCR(inputPath, outputPath);
+      else if (ocrEnabled && this.isImageFormat(sourceFormat) && targetFormat === 'txt') {
+        result = await this.convertWithOCR(inputPath, outputPath);
+      }
+      else {
+        throw new Error(`Unsupported conversion: ${sourceFormat} -> ${targetFormat}`);
       }
 
-      throw new Error(`Unsupported conversion: ${sourceFormat} -> ${targetFormat}`);
+      // Cleanup temp files after successful conversion
+      await this.cleanupTempFiles(tempFiles);
+      return result;
     } catch (error) {
       logger.error('Conversion failed', { error, sourceFormat, targetFormat });
+      // Cleanup temp files even on error
+      await this.cleanupTempFiles(tempFiles);
       throw error;
+    }
+  }
+
+  /**
+   * Cleanup temporary files
+   */
+  private async cleanupTempFiles(files: string[]): Promise<void> {
+    for (const file of files) {
+      try {
+        await fs.unlink(file);
+        logger.debug('Cleaned up temp file', { file });
+      } catch (error) {
+        logger.warn('Failed to cleanup temp file', { file, error });
+      }
     }
   }
 
