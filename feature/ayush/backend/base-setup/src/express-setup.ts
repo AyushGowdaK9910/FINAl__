@@ -2,10 +2,10 @@
  * CON-17: Express.js setup
  */
 
-import express, { Application } from 'express';
+import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import { setupSwagger } from '../docs/swagger';
-import { setupHealthChecks } from '../health/health-check-controller';
+import { setupSwagger } from './docs/swagger';
+import { setupHealthChecks } from './health/health-check-controller';
 
 const app: Application = express();
 
@@ -20,7 +20,7 @@ setupSwagger(app);
 setupHealthChecks(app);
 
 // Basic route
-app.get('/', (req, res) => {
+app.get('/', (_req: Request, res: Response) => {
   res.json({
     message: 'File Converter API',
     version: '1.0.0',
@@ -29,5 +29,13 @@ app.get('/', (req, res) => {
   });
 });
 
-export default app;
+// Error handler middleware
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error('Error:', err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',
+  });
+});
 
+export default app;

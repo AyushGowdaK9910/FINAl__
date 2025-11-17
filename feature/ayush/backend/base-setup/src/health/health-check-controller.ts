@@ -59,7 +59,7 @@ const checkServices = async (): Promise<HealthStatus['services']> => {
 
   // Add storage health check
   try {
-    const fs = require('fs').promises;
+    const fs = await import('fs/promises');
     await fs.access('./uploads');
     services.storage = 'ok';
   } catch {
@@ -103,7 +103,7 @@ export const setupHealthChecks = (app: Application): void => {
    *               $ref: '#/components/schemas/HealthResponse'
    */
   // Basic health check endpoint - Return service status and uptime with timestamp
-  app.get('/api/health', (req: Request, res: Response) => {
+  app.get('/api/health', (_req: Request, res: Response) => {
     const uptime = getUptime();
     const response = {
       status: 'ok' as const,
@@ -126,7 +126,7 @@ export const setupHealthChecks = (app: Application): void => {
    *         description: Service is down or degraded
    */
   // Detailed health check endpoint - Return service-level status indicators
-  app.get('/api/health/detailed', async (req: Request, res: Response) => {
+  app.get('/api/health/detailed', async (_req: Request, res: Response) => {
     const services = await checkServices();
     const status = determineStatus(services);
     const uptime = getUptime();
@@ -155,7 +155,7 @@ export const setupHealthChecks = (app: Application): void => {
    */
   // Uptime endpoint - Implement /api/health/uptime endpoint
   // Add formatted uptime display, include start time and current time, calculate uptime percentage
-  app.get('/api/health/uptime', (req: Request, res: Response) => {
+  app.get('/api/health/uptime', (_req: Request, res: Response) => {
     const checkStartTime = Date.now();
     const uptime = getUptime();
     const statistics = uptimeMonitor.getStatistics();
