@@ -1,6 +1,13 @@
 /**
  * CON-5: File Validation Service
  * Validates file types, MIME types, and detects corruption
+ * 
+ * Features:
+ * - MIME type validation
+ * - File extension checking
+ * - File size validation
+ * - File corruption detection
+ * - Magic number validation
  */
 
 import { fileTypeFromFile } from 'file-type';
@@ -9,6 +16,10 @@ import fs from 'fs/promises';
 import path from 'path';
 import { logger } from '../utils/logger';
 
+/**
+ * Validation result interface
+ * Contains validation status and error messages
+ */
 export interface ValidationResult {
   valid: boolean;
   errors: string[];
@@ -16,11 +27,21 @@ export interface ValidationResult {
   detectedExtension?: string;
 }
 
+/**
+ * FileValidationService class
+ * Manages file validation operations including MIME type and extension checking
+ */
 export class FileValidationService {
   private allowedMimeTypes: string[];
   private allowedExtensions: string[];
   private maxFileSize: number;
 
+  /**
+   * Initialize file validation service
+   * @param allowedMimeTypes List of allowed MIME types
+   * @param allowedExtensions List of allowed file extensions
+   * @param maxFileSize Maximum file size in bytes (default: 50MB)
+   */
   constructor(
     allowedMimeTypes: string[] = [
       'application/pdf',
@@ -38,6 +59,12 @@ export class FileValidationService {
     this.allowedMimeTypes = allowedMimeTypes;
     this.allowedExtensions = allowedExtensions;
     this.maxFileSize = maxFileSize;
+    
+    logger.info('FileValidationService initialized', {
+      allowedMimeTypes: this.allowedMimeTypes.length,
+      allowedExtensions: this.allowedExtensions.length,
+      maxFileSize: `${this.maxFileSize / 1024 / 1024}MB`,
+    });
   }
 
   /**
