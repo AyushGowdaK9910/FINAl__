@@ -93,15 +93,22 @@ export class UploadService {
 
   /**
    * Get multer upload middleware
+   * Configures disk storage with unique filenames and file size limits
+   * Includes destination directory management and UUID-based filename generation
    */
   getUploadMiddleware() {
     return multer({
       storage: this.getStorage(),
       limits: {
-        fileSize: this.maxFileSize,
+        fileSize: this.maxFileSize, // Maximum file size (default: 50MB)
+        files: 1, // Limit to single file upload
+        fields: 10, // Maximum number of non-file fields
+        fieldNameSize: 100, // Maximum field name size
+        fieldSize: 1024 * 1024, // Maximum field value size (1MB)
       },
       fileFilter: (req, file, cb) => {
         // File filter will be handled by validation middleware
+        // This allows all files to pass through for validation
         cb(null, true);
       },
     });
