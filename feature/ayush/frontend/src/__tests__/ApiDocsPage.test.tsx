@@ -51,7 +51,7 @@ describe('ApiDocsPage', () => {
     render(<ApiDocsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/failed to load api documentation/i)).toBeInTheDocument();
+      expect(screen.getByText(/failed to fetch api spec/i)).toBeInTheDocument();
     });
   });
 
@@ -61,7 +61,7 @@ describe('ApiDocsPage', () => {
     render(<ApiDocsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/failed to load api documentation/i)).toBeInTheDocument();
+      expect(screen.getByText(/network error/i)).toBeInTheDocument();
     });
   });
 
