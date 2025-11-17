@@ -23,8 +23,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-        env:
-          npm_config_cache: ''
+          cache: 'npm'
+          cache-dependency-path: 'feature/ayush/backend/base-setup/package-lock.json'
 
       - name: Install dependencies
         working-directory: feature/ayush/backend/base-setup
@@ -62,8 +62,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-        env:
-          npm_config_cache: ''
+          cache: 'npm'
+          cache-dependency-path: 'feature/ayush/backend/base-setup/package-lock.json'
 
       - name: Install dependencies
         working-directory: feature/ayush/backend/base-setup
