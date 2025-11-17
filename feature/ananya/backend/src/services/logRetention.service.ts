@@ -123,6 +123,8 @@ export class LogRetentionService {
 
   /**
    * Delete archived logs older than retention period
+   * Implements cleanup for archived logs beyond retention period
+   * Includes comprehensive error handling for file operations
    */
   async deleteOldArchivedLogs(): Promise<void> {
     try {
@@ -133,38 +135,69 @@ export class LogRetentionService {
         await fs.access(archiveDir);
       } catch {
         // Archive directory doesn't exist, nothing to delete
+        logger.debug('Archive directory does not exist, skipping deletion', { archiveDir });
         return;
       }
 
       const files = await fs.readdir(archiveDir);
       const now = Date.now();
       let deletedCount = 0;
+      let errorCount = 0;
+      const retentionDays = Math.floor(this.retentionMs / (24 * 60 * 60 * 1000));
 
       for (const file of files) {
         const filePath = path.join(archiveDir, file);
         
         try {
           const stats = await fs.stat(filePath);
+          
+          // Skip if it's a directory
+          if (stats.isDirectory()) {
+            continue;
+          }
+
           const fileAge = now - stats.mtimeMs;
+          const fileAgeDays = Math.floor(fileAge / (24 * 60 * 60 * 1000));
 
           // If archived file is older than retention period, delete it
           if (fileAge > this.retentionMs) {
-            await fs.unlink(filePath);
-            deletedCount++;
+            try {
+              await fs.unlink(filePath);
+              deletedCount++;
 
-            logger.info('Deleted old archived log', {
-              file,
-              age: Math.floor(fileAge / (24 * 60 * 60 * 1000)),
-            });
+              logger.info('Deleted old archived log', {
+                file,
+                ageDays: fileAgeDays,
+                retentionDays,
+                size: stats.size,
+              });
+            } catch (unlinkError) {
+              errorCount++;
+              logger.warn('Failed to delete archived log file', { 
+                file, 
+                error: unlinkError instanceof Error ? unlinkError.message : String(unlinkError)
+              });
+            }
           }
         } catch (error) {
-          logger.warn('Error processing archived log file', { file, error });
+          errorCount++;
+          logger.warn('Error processing archived log file', { 
+            file, 
+            error: error instanceof Error ? error.message : String(error)
+          });
         }
       }
 
-      logger.info('Old archived log deletion completed', { deletedCount });
+      logger.info('Old archived log deletion completed', { 
+        deletedCount, 
+        errorCount,
+        totalFiles: files.length,
+        retentionDays
+      });
     } catch (error) {
-      logger.error('Old archived log deletion failed', { error });
+      logger.error('Old archived log deletion failed', { 
+        error: error instanceof Error ? error.message : String(error)
+      });
       throw error;
     }
   }
