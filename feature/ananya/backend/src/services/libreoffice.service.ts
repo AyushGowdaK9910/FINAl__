@@ -19,6 +19,8 @@ export interface LibreOfficeOptions {
 export class LibreOfficeService {
   /**
    * Convert document using LibreOffice
+   * Supports headless conversion mode for server environments
+   * Handles DOCX, PDF, ODT, RTF, TXT, HTML formats
    */
   async convert(options: LibreOfficeOptions): Promise<string> {
     const { inputPath, outputPath, targetFormat } = options;
