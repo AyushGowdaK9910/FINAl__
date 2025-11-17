@@ -25,10 +25,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Inspect repo layout
+        run: ls -la backend/base-setup || true
+
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
 
       - name: Install dependencies
         working-directory: backend/base-setup
@@ -55,10 +59,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Inspect repo layout
+        run: ls -la backend/base-setup || true
+
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
 
       - name: Install dependencies
         working-directory: backend/base-setup
@@ -89,10 +97,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Inspect repo layout
+        run: ls -la backend/base-setup || true
+
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
 
       - name: Install dependencies
         working-directory: backend/base-setup
