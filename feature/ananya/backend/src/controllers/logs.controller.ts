@@ -1,6 +1,12 @@
 /**
  * CON-4: Logs Controller
  * Provides API endpoints for viewing logs
+ * 
+ * Features:
+ * - List all log files with metadata
+ * - Get log file contents with pagination
+ * - Search logs with filters
+ * - Get retention statistics
  */
 
 import { Request, Response } from 'express';
@@ -14,6 +20,7 @@ const logDir = path.join(process.cwd(), 'logs');
 export class LogsController {
   /**
    * Get list of log files
+   * Returns all log files with metadata (size, modified date, created date)
    */
   async getLogFiles(req: Request, res: Response): Promise<void> {
     try {
@@ -48,11 +55,13 @@ export class LogsController {
 
   /**
    * Get log file contents
+   * Supports pagination and level filtering
+   * Returns parsed log entries with metadata
    */
   async getLogContent(req: Request, res: Response): Promise<void> {
     try {
       const { filename } = req.params;
-      const { lines = 100, level } = req.query;
+      const { lines = 100, level, offset = 0 } = req.query;
 
       // Security: prevent directory traversal
       if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
@@ -92,9 +101,12 @@ export class LogsController {
         });
       }
 
-      // Get last N lines
+      // Get lines with pagination support
       const requestedLines = parseInt(lines.toString(), 10);
-      const lastLines = filteredLines.slice(-requestedLines);
+      const offsetValue = parseInt(offset.toString(), 10);
+      const startIndex = Math.max(0, filteredLines.length - requestedLines - offsetValue);
+      const endIndex = filteredLines.length - offsetValue;
+      const lastLines = filteredLines.slice(startIndex, endIndex);
 
       // Parse JSON logs
       const parsedLogs = lastLines.map((line) => {
@@ -123,10 +135,12 @@ export class LogsController {
 
   /**
    * Search logs
+   * Supports query string, level filtering, and date range filtering
+   * Returns up to 1000 matching results
    */
   async searchLogs(req: Request, res: Response): Promise<void> {
     try {
-      const { query, level, startDate, endDate } = req.query;
+      const { query, level, startDate, endDate, limit = 1000 } = req.query;
 
       const files = await fs.readdir(logDir);
       const results: any[] = [];
@@ -174,10 +188,14 @@ export class LogsController {
         }
       }
 
+      const limitValue = parseInt(limit.toString(), 10);
+      const limitedResults = results.slice(0, limitValue);
+      
       res.json({
         success: true,
-        count: results.length,
-        results: results.slice(0, 1000), // Limit to 1000 results
+        count: limitedResults.length,
+        totalMatches: results.length,
+        results: limitedResults,
       });
     } catch (error) {
       logger.error('Failed to search logs', { error });
