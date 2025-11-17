@@ -146,13 +146,27 @@ export class DownloadController {
 
   /**
    * Stream file (for preview)
+   * Implements file streaming without download for inline file viewing
+   * Supports preview of images, PDFs, and other viewable formats
    */
   async streamFile(req: Request, res: Response): Promise<void> {
     try {
       const { fileId } = req.params;
+      
+      if (!fileId) {
+        res.status(400).json({
+          success: false,
+          error: 'File ID is required',
+        });
+        return;
+      }
+
+      logger.info('Stream request received', { fileId });
+
       const file = await uploadService.getFile(fileId);
 
       if (!file) {
+        logger.warn('File not found for streaming', { fileId });
         res.status(404).json({
           success: false,
           error: 'File not found',
@@ -161,6 +175,7 @@ export class DownloadController {
       }
 
       if (!fs.existsSync(file.path)) {
+        logger.error('File not found on disk for streaming', { fileId, path: file.path });
         res.status(404).json({
           success: false,
           error: 'File not found on disk',
@@ -168,17 +183,43 @@ export class DownloadController {
         return;
       }
 
+      // Set proper content headers for inline viewing
       res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
       res.setHeader('Content-Length', file.size.toString());
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(file.originalName || file.filename)}"`);
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
 
+      // Implement file streaming without download
       const fileStream = fs.createReadStream(file.path);
+      
+      fileStream.on('error', (error) => {
+        logger.error('File stream error', { fileId, error: error.message });
+        if (!res.headersSent) {
+          res.status(500).json({
+            success: false,
+            error: 'File stream error',
+          });
+        }
+      });
+
       fileStream.pipe(res);
+
+      logger.info('File streaming started', {
+        fileId,
+        filename: file.originalName,
+        mimeType: file.mimeType,
+      });
     } catch (error) {
-      logger.error('Stream failed', { error });
+      logger.error('Stream failed', { 
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
       if (!res.headersSent) {
         res.status(500).json({
           success: false,
           error: 'Stream failed',
+          message: error instanceof Error ? error.message : 'Unknown error',
         });
       }
     }
