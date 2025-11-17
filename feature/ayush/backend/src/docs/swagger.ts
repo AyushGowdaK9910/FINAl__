@@ -68,7 +68,7 @@ const options: swaggerJsdoc.Options = {
       },
     },
   },
-  apis: ['./src/**/*.ts'], // Path to the API files
+  apis: ['./src/**/*.ts'], // Path to the API files (relative to project root)
 };
 
 const swaggerSpec = swaggerJsdoc(options);

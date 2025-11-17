@@ -3,6 +3,9 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 2020,
     sourceType: 'module',
+    ecmaFeatures: {
+      jsx: true,
+    },
     project: './tsconfig.json',
   },
   extends: [
@@ -11,8 +14,9 @@ module.exports = {
   ],
   plugins: ['@typescript-eslint'],
   env: {
-    node: true,
+    browser: true,
     es2020: true,
+    node: true,
   },
   rules: {
     '@typescript-eslint/no-explicit-any': 'warn',
@@ -21,6 +25,6 @@ module.exports = {
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     'no-console': ['warn', { allow: ['warn', 'error', 'log'] }],
   },
-  ignorePatterns: ['dist', 'node_modules', 'coverage', '*.js'],
+  ignorePatterns: ['dist', 'node_modules', 'build', '*.config.js'],
 };
 
