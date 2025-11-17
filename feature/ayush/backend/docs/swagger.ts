@@ -1,5 +1,11 @@
 /**
  * CON-7: Swagger/OpenAPI Documentation Setup
+ * 
+ * Features:
+ * - Install swagger-jsdoc and swagger-ui-express
+ * - Configure OpenAPI 3.0 specification
+ * - Set up Swagger UI endpoint
+ * - Add API documentation structure
  */
 
 import { Application } from 'express';
@@ -8,16 +14,21 @@ import swaggerUi from 'swagger-ui-express';
 import { serve, setup } from 'swagger-ui-express';
 import redoc from 'redoc-express';
 
+// OpenAPI 3.0 specification configuration
 const options: swaggerJsdoc.Options = {
   definition: {
     openapi: '3.0.0',
     info: {
       title: 'File Converter API',
       version: '1.0.0',
-      description: 'API documentation for File Converter Service',
+      description: 'API documentation for File Converter Service - Complete API reference with request/response schemas',
       contact: {
         name: 'API Support',
         email: 'support@fileconverter.com',
+      },
+      license: {
+        name: 'MIT',
+        url: 'https://opensource.org/licenses/MIT',
       },
     },
     servers: [
