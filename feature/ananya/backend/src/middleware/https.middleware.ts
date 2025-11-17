@@ -93,8 +93,22 @@ export const securityHeaders = (req: Request, res: Response, next: NextFunction)
   // Controls which browser features can be used
   res.setHeader(
     'Permissions-Policy',
-    'geolocation=(), microphone=(), camera=(), payment=()'
+    'geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=()'
   );
+
+  // X-Permitted-Cross-Domain-Policies
+  // Prevents Adobe products from loading content
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+
+  // Expect-CT (Certificate Transparency)
+  // Helps detect misissued certificates
+  if (isHttps) {
+    res.setHeader('Expect-CT', 'max-age=86400, enforce');
+  }
+
+  // Clear-Site-Data (optional, for logout scenarios)
+  // Can be set conditionally when needed
+  // res.setHeader('Clear-Site-Data', '"cache", "cookies", "storage"');
 
   next();
 };
