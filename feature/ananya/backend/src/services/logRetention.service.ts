@@ -39,6 +39,7 @@ export class LogRetentionService {
 
   /**
    * Archive logs older than retention period
+   * Implements date-based log filtering and archive directory management
    */
   async archiveOldLogs(): Promise<void> {
     try {
@@ -51,26 +52,55 @@ export class LogRetentionService {
       const files = await fs.readdir(logDir);
       const now = Date.now();
       let archivedCount = 0;
+      const retentionDays = Math.floor(this.retentionMs / (24 * 60 * 60 * 1000));
 
-      for (const file of files) {
+      // Filter only log files
+      const logFiles = files.filter(file => 
+        file.endsWith('.log') || 
+        file.endsWith('.log.gz') ||
+        file.match(/application-\d{4}-\d{2}-\d{2}\.log/)
+      );
+
+      for (const file of logFiles) {
         const filePath = path.join(logDir, file);
         
         try {
           const stats = await fs.stat(filePath);
+          
+          // Skip if it's a directory
+          if (stats.isDirectory()) {
+            continue;
+          }
+
           const fileAge = now - stats.mtimeMs;
+          const fileAgeDays = Math.floor(fileAge / (24 * 60 * 60 * 1000));
 
           // If file is older than retention period
           if (fileAge > this.retentionMs) {
             const archivePath = path.join(archiveDir, file);
             
+            // Check if archive file already exists (handle duplicates)
+            let finalArchivePath = archivePath;
+            let counter = 1;
+            while (true) {
+              try {
+                await fs.access(finalArchivePath);
+                finalArchivePath = path.join(archiveDir, `${path.basename(file, path.extname(file))}_${counter}${path.extname(file)}`);
+                counter++;
+              } catch {
+                break; // File doesn't exist, use this path
+              }
+            }
+            
             // Move to archive
-            await fs.rename(filePath, archivePath);
+            await fs.rename(filePath, finalArchivePath);
             archivedCount++;
 
             logger.info('Archived log file', {
               file,
-              age: Math.floor(fileAge / (24 * 60 * 60 * 1000)),
-              archivePath,
+              ageDays: fileAgeDays,
+              retentionDays,
+              archivePath: finalArchivePath,
             });
           }
         } catch (error) {
@@ -78,7 +108,13 @@ export class LogRetentionService {
         }
       }
 
-      logger.info('Log archival completed', { archivedCount, totalFiles: files.length });
+      logger.info('Log archival completed', { 
+        archivedCount, 
+        totalFiles: logFiles.length,
+        retentionDays,
+        logDirectory: logDir,
+        archiveDirectory: archiveDir
+      });
     } catch (error) {
       logger.error('Log archival failed', { error });
       throw error;
