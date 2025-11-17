@@ -11,9 +11,21 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "strict": true
+    "strict": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["vite/client"]
   },
-  "include": ["src", "src/**/*", "src/vite-env.d.ts", "src/types/**/*.d.ts"],
+  "include": [
+    "src",
+    "src/**/*",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/vite-env.d.ts",
+    "src/types/**/*.d.ts"
+  ],
+  "exclude": ["node_modules", "dist"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
 
