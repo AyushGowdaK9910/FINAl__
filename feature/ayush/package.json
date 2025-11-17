@@ -1,0 +1,20 @@
+{
+  "name": "ayush-feature-branch",
+  "version": "1.0.0",
+  "description": "Root package.json for Ayush's feature branch - convenience scripts",
+  "private": true,
+  "scripts": {
+    "install:backend": "cd backend/base-setup && npm install",
+    "install:frontend": "cd frontend && npm install",
+    "install:all": "npm run install:backend && npm run install:frontend",
+    "dev:backend": "cd backend/base-setup && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:backend": "cd backend/base-setup && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "test:backend": "cd backend/base-setup && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "lint:backend": "cd backend/base-setup && npm run lint",
+    "lint:frontend": "cd frontend && npm run lint"
+  }
+}
+
