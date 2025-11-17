@@ -83,19 +83,39 @@ const options: swaggerJsdoc.Options = {
   apis: ['./src/**/*.ts'], // Path to the API files
 };
 
+// Generate Swagger specification from JSDoc comments
+// Configure API path scanning to find all route definitions
 const swaggerSpec = swaggerJsdoc(options);
 
+/**
+ * Setup Swagger documentation
+ * Implements setupSwagger function with API path scanning
+ * Configure Swagger JSON endpoint and custom Swagger UI theme
+ */
 export const setupSwagger = (app: Application): void => {
-  // Swagger UI
+  // Swagger UI endpoint - Set up custom Swagger UI theme
   app.use('/api-docs', serve, setup(swaggerSpec, {
     explorer: true,
-    customCss: '.swagger-ui .topbar { display: none }',
+    customCss: `
+      .swagger-ui .topbar { display: none }
+      .swagger-ui .info { margin: 20px 0; }
+      .swagger-ui .scheme-container { background: #fafafa; padding: 10px; }
+    `,
     customSiteTitle: 'File Converter API Documentation',
+    customfavIcon: '/favicon.ico',
+    swaggerOptions: {
+      persistAuthorization: true,
+      displayRequestDuration: true,
+      filter: true,
+      showExtensions: true,
+      showCommonExtensions: true,
+    },
   }));
 
-  // Swagger JSON endpoint
+  // Swagger JSON endpoint - Add Swagger JSON endpoint for programmatic access
   app.get('/api-docs.json', (req, res) => {
     res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.send(swaggerSpec);
   });
 
