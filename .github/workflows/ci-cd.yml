@@ -69,29 +69,29 @@ jobs:
             echo "client-path=" >> $GITHUB_OUTPUT
           fi
           
-          # Check for server/backend - check base-setup first, then regular backend
-          if [ -d "server" ]; then
+          # Check for server/backend - use actual backend directories with package.json
+          if [ -d "server" ] && [ -f "server/package.json" ]; then
             echo "✅ Found: server/"
             echo "has-server=true" >> $GITHUB_OUTPUT
             echo "server-path=server" >> $GITHUB_OUTPUT
-          elif [ -d "feature/ayush/backend/base-setup" ]; then
-            echo "✅ Found: feature/ayush/backend/base-setup"
+          elif [ -d "feature/ayush/backend" ] && [ -f "feature/ayush/backend/base-setup/package.json" ]; then
+            echo "✅ Found: feature/ayush/backend/base-setup (with package.json)"
             echo "has-server=true" >> $GITHUB_OUTPUT
             echo "server-path=feature/ayush/backend/base-setup" >> $GITHUB_OUTPUT
-          elif [ -d "feature/ayush/backend" ]; then
-            echo "✅ Found: feature/ayush/backend (no base-setup subdirectory)"
+          elif [ -d "feature/ayush/backend" ] && [ -f "feature/ayush/backend/package.json" ]; then
+            echo "✅ Found: feature/ayush/backend (with package.json)"
             echo "has-server=true" >> $GITHUB_OUTPUT
             echo "server-path=feature/ayush/backend" >> $GITHUB_OUTPUT
-          elif [ -d "feature/ananya/backend" ]; then
+          elif [ -d "feature/ananya/backend" ] && [ -f "feature/ananya/backend/package.json" ]; then
             echo "✅ Found: feature/ananya/backend"
             echo "has-server=true" >> $GITHUB_OUTPUT
             echo "server-path=feature/ananya/backend" >> $GITHUB_OUTPUT
-          elif [ -d "feature/anivartha/backend" ]; then
+          elif [ -d "feature/anivartha/backend" ] && [ -f "feature/anivartha/backend/package.json" ]; then
             echo "✅ Found: feature/anivartha/backend"
             echo "has-server=true" >> $GITHUB_OUTPUT
             echo "server-path=feature/anivartha/backend" >> $GITHUB_OUTPUT
           else
-            echo "⚠️ No server/backend directory found"
+            echo "⚠️ No server/backend directory with package.json found"
             echo "has-server=false" >> $GITHUB_OUTPUT
             echo "server-path=" >> $GITHUB_OUTPUT
           fi
