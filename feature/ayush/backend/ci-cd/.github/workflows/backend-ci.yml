@@ -33,7 +33,6 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: backend/base-setup/package.json
 
       - name: Install dependencies
         working-directory: backend/base-setup
@@ -68,7 +67,6 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: backend/base-setup/package.json
 
       - name: Install dependencies
         working-directory: backend/base-setup
@@ -107,7 +105,6 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: backend/base-setup/package.json
 
       - name: Install dependencies
         working-directory: backend/base-setup
