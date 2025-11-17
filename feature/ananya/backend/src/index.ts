@@ -14,14 +14,11 @@ import { logger } from './utils/logger';
 import { httpsEnforcement, securityHeaders } from './middleware/https.middleware';
 import logsRoutes from './routes/logs.routes';
 import { LogRetentionService } from './services/logRetention.service';
+import { config, validateTLSConfig } from './config/env';
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-const ENABLE_HTTPS = process.env.ENABLE_HTTPS === 'true';
-const SSL_CERT_PATH = process.env.SSL_CERT_PATH;
-const SSL_KEY_PATH = process.env.SSL_KEY_PATH;
 
 // Security middleware
 app.use(helmet());
@@ -29,7 +26,7 @@ app.use(cors());
 app.use(express.json());
 
 // CON-10: HTTPS enforcement and security headers
-if (ENABLE_HTTPS) {
+if (config.enableHttps) {
   app.use(httpsEnforcement);
 }
 app.use(securityHeaders);
@@ -50,29 +47,52 @@ app.get('/api/health', (req, res) => {
 const startServer = () => {
   let server;
 
-  if (ENABLE_HTTPS && SSL_CERT_PATH && SSL_KEY_PATH) {
+  // Validate TLS configuration
+  const tlsValidation = validateTLSConfig();
+  if (config.enableHttps && !tlsValidation.valid) {
+    logger.warn('TLS configuration validation failed', { errors: tlsValidation.errors });
+    logger.warn('Falling back to HTTP mode');
+  }
+
+  // Configure HTTPS server if enabled and certificates are available
+  if (config.enableHttps && config.sslCertPath && config.sslKeyPath) {
     try {
-      const options = {
-        key: fs.readFileSync(SSL_KEY_PATH),
-        cert: fs.readFileSync(SSL_CERT_PATH),
+      const httpsOptions: https.ServerOptions = {
+        key: fs.readFileSync(config.sslKeyPath),
+        cert: fs.readFileSync(config.sslCertPath),
       };
-      server = https.createServer(options, app);
-      logger.info('HTTPS server configured', { certPath: SSL_CERT_PATH });
+
+      // Add CA chain if provided
+      if (config.sslCaPath) {
+        httpsOptions.ca = fs.readFileSync(config.sslCaPath);
+      }
+
+      server = https.createServer(httpsOptions, app);
+      logger.info('HTTPS server configured successfully', { 
+        certPath: config.sslCertPath,
+        keyPath: config.sslKeyPath,
+        hasCa: !!config.sslCaPath
+      });
     } catch (error) {
-      logger.error('Failed to load SSL certificates, falling back to HTTP', { error });
+      logger.error('Failed to load SSL certificates, falling back to HTTP', { 
+        error: error instanceof Error ? error.message : String(error),
+        certPath: config.sslCertPath,
+        keyPath: config.sslKeyPath
+      });
       server = http.createServer(app);
     }
   } else {
     server = http.createServer(app);
-    if (ENABLE_HTTPS) {
+    if (config.enableHttps) {
       logger.warn('HTTPS enabled but certificates not provided, running in HTTP mode');
     }
   }
 
-  server.listen(PORT, () => {
-    logger.info(`Server running on port ${PORT}`, {
-      https: ENABLE_HTTPS,
-      protocol: ENABLE_HTTPS ? 'https' : 'http',
+  server.listen(config.port, () => {
+    logger.info(`Server running on port ${config.port}`, {
+      https: config.enableHttps && server instanceof https.Server,
+      protocol: server instanceof https.Server ? 'https' : 'http',
+      nodeEnv: config.nodeEnv,
     });
   });
 
