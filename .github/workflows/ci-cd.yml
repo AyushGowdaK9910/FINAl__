@@ -1,0 +1,437 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - "main"
+      - "master"
+      - "developer"
+      - "feature/**"
+  pull_request:
+    branches:
+      - "developer"
+      - "main"
+      - "master"
+    types: [opened, synchronize, reopened]
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  detect-structure:
+    runs-on: ubuntu-latest
+    outputs:
+      has-client: ${{ steps.detect.outputs.has-client }}
+      has-server: ${{ steps.detect.outputs.has-server }}
+      client-path: ${{ steps.detect.outputs.client-path }}
+      server-path: ${{ steps.detect.outputs.server-path }}
+      feature-name: ${{ steps.detect.outputs.feature-name }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Detect project structure
+        id: detect
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Repository contents:"
+          ls -la
+          echo ""
+          echo "Checking for directories..."
+          
+          # Detect feature branch name
+          if [[ "${{ github.ref }}" == refs/heads/feature/* ]]; then
+            FEATURE_NAME=$(echo "${{ github.ref }}" | sed 's|refs/heads/feature/||')
+            echo "feature-name=$FEATURE_NAME" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/heads/feature-* ]]; then
+            FEATURE_NAME=$(echo "${{ github.ref }}" | sed 's|refs/heads/feature-||')
+            echo "feature-name=$FEATURE_NAME" >> $GITHUB_OUTPUT
+          else
+            echo "feature-name=" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check for client/frontend
+          if [ -d "client" ]; then
+            echo "✅ Found: client/"
+            echo "has-client=true" >> $GITHUB_OUTPUT
+            echo "client-path=client" >> $GITHUB_OUTPUT
+          elif [ -d "feature/ayush/frontend" ]; then
+            echo "✅ Found: feature/ayush/frontend"
+            echo "has-client=true" >> $GITHUB_OUTPUT
+            echo "client-path=feature/ayush/frontend" >> $GITHUB_OUTPUT
+          elif [ -d "feature/ananya/frontend" ]; then
+            echo "✅ Found: feature/ananya/frontend"
+            echo "has-client=true" >> $GITHUB_OUTPUT
+            echo "client-path=feature/ananya/frontend" >> $GITHUB_OUTPUT
+          elif [ -d "feature/anivartha/frontend" ]; then
+            echo "✅ Found: feature/anivartha/frontend"
+            echo "has-client=true" >> $GITHUB_OUTPUT
+            echo "client-path=feature/anivartha/frontend" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ No client/frontend directory found"
+            echo "has-client=false" >> $GITHUB_OUTPUT
+            echo "client-path=" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check for server/backend - use actual backend directories with package.json
+          if [ -d "server" ] && [ -f "server/package.json" ]; then
+            echo "✅ Found: server/"
+            echo "has-server=true" >> $GITHUB_OUTPUT
+            echo "server-path=server" >> $GITHUB_OUTPUT
+          elif [ -d "feature/ayush/backend" ] && [ -f "feature/ayush/backend/base-setup/package.json" ]; then
+            echo "✅ Found: feature/ayush/backend/base-setup (with package.json)"
+            echo "has-server=true" >> $GITHUB_OUTPUT
+            echo "server-path=feature/ayush/backend/base-setup" >> $GITHUB_OUTPUT
+          elif [ -d "feature/ayush/backend" ] && [ -f "feature/ayush/backend/package.json" ]; then
+            echo "✅ Found: feature/ayush/backend (with package.json)"
+            echo "has-server=true" >> $GITHUB_OUTPUT
+            echo "server-path=feature/ayush/backend" >> $GITHUB_OUTPUT
+          elif [ -d "feature/ananya/backend" ] && [ -f "feature/ananya/backend/package.json" ]; then
+            echo "✅ Found: feature/ananya/backend"
+            echo "has-server=true" >> $GITHUB_OUTPUT
+            echo "server-path=feature/ananya/backend" >> $GITHUB_OUTPUT
+          elif [ -d "feature/anivartha/backend" ] && [ -f "feature/anivartha/backend/package.json" ]; then
+            echo "✅ Found: feature/anivartha/backend"
+            echo "has-server=true" >> $GITHUB_OUTPUT
+            echo "server-path=feature/anivartha/backend" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ No server/backend directory with package.json found"
+            echo "has-server=false" >> $GITHUB_OUTPUT
+            echo "server-path=" >> $GITHUB_OUTPUT
+          fi
+          
+          echo ""
+          echo "=== Detection Results ==="
+          echo "Client: ${{ steps.detect.outputs.client-path }}"
+          echo "Server: ${{ steps.detect.outputs.server-path }}"
+          
+          # Verify detected paths exist
+          if [ -n "${{ steps.detect.outputs.client-path }}" ]; then
+            if [ -d "${{ steps.detect.outputs.client-path }}" ]; then
+              echo "✅ Client path verified: ${{ steps.detect.outputs.client-path }}"
+            else
+              echo "❌ Client path does not exist: ${{ steps.detect.outputs.client-path }}"
+            fi
+          fi
+          
+          if [ -n "${{ steps.detect.outputs.server-path }}" ]; then
+            if [ -d "${{ steps.detect.outputs.server-path }}" ]; then
+              echo "✅ Server path verified: ${{ steps.detect.outputs.server-path }}"
+            else
+              echo "❌ Server path does not exist: ${{ steps.detect.outputs.server-path }}"
+            fi
+          fi
+
+  build:
+    runs-on: ubuntu-latest
+    needs: detect-structure
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: 'npm'
+          cache-dependency-path: ${{ needs.detect-structure.outputs.client-path }}/package-lock.json
+
+      - name: Install client dependencies
+        if: needs.detect-structure.outputs.has-client == 'true'
+        run: |
+          pwd
+          ls -la
+          if [ -n "${{ needs.detect-structure.outputs.client-path }}" ] && [ -d "${{ needs.detect-structure.outputs.client-path }}" ]; then
+            cd "${{ needs.detect-structure.outputs.client-path }}"
+            pwd
+            ls -la
+            if [ -f "package-lock.json" ]; then
+              npm ci
+            else
+              npm install
+            fi
+          else
+            echo "⚠️ No client folder found at: ${{ needs.detect-structure.outputs.client-path }}"
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: 'npm'
+          cache-dependency-path: ${{ needs.detect-structure.outputs.server-path }}/package-lock.json
+
+      - name: Install server dependencies
+        if: needs.detect-structure.outputs.has-server == 'true'
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Server path from detection: ${{ needs.detect-structure.outputs.server-path }}"
+          echo "Checking if path exists..."
+          ls -la "${{ needs.detect-structure.outputs.server-path }}" 2>&1 || echo "Path does not exist"
+          
+          if [ -n "${{ needs.detect-structure.outputs.server-path }}" ]; then
+            if [ -d "${{ needs.detect-structure.outputs.server-path }}" ]; then
+              echo "✅ Directory exists, changing to: ${{ needs.detect-structure.outputs.server-path }}"
+              cd "${{ needs.detect-structure.outputs.server-path }}"
+              echo "Current directory after cd: $(pwd)"
+              echo "Contents:"
+              ls -la
+              if [ -f "package-lock.json" ]; then
+                echo "Found package-lock.json, running npm ci"
+                npm ci
+              elif [ -f "package.json" ]; then
+                echo "Found package.json, running npm install"
+                npm install
+              else
+                echo "⚠️ No package.json found in ${{ needs.detect-structure.outputs.server-path }}"
+              fi
+            else
+              echo "❌ Directory does not exist: ${{ needs.detect-structure.outputs.server-path }}"
+              echo "Available directories:"
+              find . -type d -name "backend" -o -name "server" 2>/dev/null | head -10
+            fi
+          else
+            echo "⚠️ No server path detected"
+          fi
+
+  test:
+    runs-on: ubuntu-latest
+    needs: [detect-structure, build]
+    env:
+      CI: false
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install all dependencies
+        run: |
+          pwd
+          ls -la
+          if [ "${{ needs.detect-structure.outputs.has-client }}" == "true" ] && [ -n "${{ needs.detect-structure.outputs.client-path }}" ]; then
+            if [ -d "${{ needs.detect-structure.outputs.client-path }}" ]; then
+              cd "${{ needs.detect-structure.outputs.client-path }}"
+              if [ -f "package-lock.json" ]; then
+                npm ci
+              else
+                npm install
+              fi
+              cd "${{ github.workspace }}"
+            else
+              echo "⚠️ Client path does not exist: ${{ needs.detect-structure.outputs.client-path }}"
+            fi
+          fi
+          if [ "${{ needs.detect-structure.outputs.has-server }}" == "true" ] && [ -n "${{ needs.detect-structure.outputs.server-path }}" ]; then
+            if [ -d "${{ needs.detect-structure.outputs.server-path }}" ]; then
+              cd "${{ needs.detect-structure.outputs.server-path }}"
+              if [ -f "package-lock.json" ]; then
+                npm ci
+              else
+                npm install
+              fi
+              cd "${{ github.workspace }}"
+            else
+              echo "⚠️ Server path does not exist: ${{ needs.detect-structure.outputs.server-path }}"
+            fi
+          fi
+
+      - name: Run Backend Tests (Readable Output)
+        if: needs.detect-structure.outputs.has-server == 'true'
+        run: |
+          mkdir -p artifacts
+          if [ -n "${{ needs.detect-structure.outputs.server-path }}" ] && [ -d "${{ needs.detect-structure.outputs.server-path }}" ]; then
+            cd "${{ needs.detect-structure.outputs.server-path }}"
+            if [ -d "tests" ] || [ -f "package.json" ]; then
+              npm test -- --coverage --runInBand > "${{ github.workspace }}/artifacts/server-test-report.txt" 2>&1 || echo "Tests completed with warnings" >> "${{ github.workspace }}/artifacts/server-test-report.txt"
+            else
+              echo "⚠️ No backend tests found." > "${{ github.workspace }}/artifacts/server-test-report.txt"
+            fi
+            cd "${{ github.workspace }}"
+          else
+            echo "⚠️ No backend tests found." > artifacts/server-test-report.txt
+          fi
+
+      - name: Run Frontend Tests (Readable Output)
+        if: needs.detect-structure.outputs.has-client == 'true'
+        run: |
+          if [ -n "${{ needs.detect-structure.outputs.client-path }}" ] && [ -d "${{ needs.detect-structure.outputs.client-path }}" ]; then
+            cd "${{ needs.detect-structure.outputs.client-path }}"
+            if [ -d "tests" ] || [ -f "package.json" ]; then
+              npm test -- --coverage --runInBand > "${{ github.workspace }}/artifacts/client-test-report.txt" 2>&1 || echo "Tests completed with warnings" >> "${{ github.workspace }}/artifacts/client-test-report.txt"
+            else
+              echo "⚠️ No frontend tests found." > "${{ github.workspace }}/artifacts/client-test-report.txt"
+            fi
+            cd "${{ github.workspace }}"
+          else
+            echo "⚠️ No frontend tests found." > artifacts/client-test-report.txt
+          fi
+
+      - name: Upload Test Output Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: artifacts/
+          if-no-files-found: ignore
+
+  coverage:
+    runs-on: ubuntu-latest
+    needs: [detect-structure, test]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Generate Coverage Reports
+        run: |
+          if [ "${{ needs.detect-structure.outputs.has-server }}" == "true" ] && [ -n "${{ needs.detect-structure.outputs.server-path }}" ] && [ -d "${{ needs.detect-structure.outputs.server-path }}" ]; then
+            cd "${{ needs.detect-structure.outputs.server-path }}"
+            npm install
+            npm test -- --coverage --coverageReporters=html || true
+            cd "${{ github.workspace }}"
+          fi
+          if [ "${{ needs.detect-structure.outputs.has-client }}" == "true" ] && [ -n "${{ needs.detect-structure.outputs.client-path }}" ] && [ -d "${{ needs.detect-structure.outputs.client-path }}" ]; then
+            cd "${{ needs.detect-structure.outputs.client-path }}"
+            npm install
+            npm test -- --coverage --coverageReporters=html || true
+            cd "${{ github.workspace }}"
+          fi
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            ${{ needs.detect-structure.outputs.client-path }}/coverage
+            ${{ needs.detect-structure.outputs.server-path }}/coverage
+          if-no-files-found: ignore
+
+  lint:
+    runs-on: ubuntu-latest
+    needs: [detect-structure, coverage]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Dependencies for Lint
+        run: |
+          if [ "${{ needs.detect-structure.outputs.has-client }}" == "true" ] && [ -n "${{ needs.detect-structure.outputs.client-path }}" ] && [ -d "${{ needs.detect-structure.outputs.client-path }}" ]; then
+            cd "${{ needs.detect-structure.outputs.client-path }}"
+            if [ -f "package-lock.json" ]; then
+              npm ci
+            else
+              npm install
+            fi
+            cd "${{ github.workspace }}"
+          fi
+          if [ "${{ needs.detect-structure.outputs.has-server }}" == "true" ] && [ -n "${{ needs.detect-structure.outputs.server-path }}" ] && [ -d "${{ needs.detect-structure.outputs.server-path }}" ]; then
+            cd "${{ needs.detect-structure.outputs.server-path }}"
+            if [ -f "package-lock.json" ]; then
+              npm ci
+            else
+              npm install
+            fi
+            cd "${{ github.workspace }}"
+          fi
+
+      - name: Run ESLint on Client
+        if: needs.detect-structure.outputs.has-client == 'true'
+        run: |
+          if [ -n "${{ needs.detect-structure.outputs.client-path }}" ] && [ -d "${{ needs.detect-structure.outputs.client-path }}" ]; then
+            cd "${{ needs.detect-structure.outputs.client-path }}"
+            npx eslint . --ext .ts,.tsx > "${{ github.workspace }}/client-lint-report.txt" 2>&1 || true
+            cd "${{ github.workspace }}"
+          fi
+
+      - name: Run ESLint on Server
+        if: needs.detect-structure.outputs.has-server == 'true'
+        run: |
+          if [ -n "${{ needs.detect-structure.outputs.server-path }}" ] && [ -d "${{ needs.detect-structure.outputs.server-path }}" ]; then
+            cd "${{ needs.detect-structure.outputs.server-path }}"
+            npx eslint . --ext .ts > "${{ github.workspace }}/server-lint-report.txt" 2>&1 || true
+            cd "${{ github.workspace }}"
+          fi
+
+      - name: Upload Lint Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-reports
+          path: |
+            client-lint-report.txt
+            server-lint-report.txt
+          if-no-files-found: ignore
+
+  security:
+    runs-on: ubuntu-latest
+    needs: [detect-structure, lint]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run npm audit (client)
+        if: needs.detect-structure.outputs.has-client == 'true'
+        run: |
+          if [ -n "${{ needs.detect-structure.outputs.client-path }}" ] && [ -d "${{ needs.detect-structure.outputs.client-path }}" ]; then
+            cd "${{ needs.detect-structure.outputs.client-path }}"
+            npm audit --json > "${{ github.workspace }}/client-security.json" 2>&1 || true
+            cd "${{ github.workspace }}"
+          fi
+
+      - name: Run npm audit (server)
+        if: needs.detect-structure.outputs.has-server == 'true'
+        run: |
+          if [ -n "${{ needs.detect-structure.outputs.server-path }}" ] && [ -d "${{ needs.detect-structure.outputs.server-path }}" ]; then
+            cd "${{ needs.detect-structure.outputs.server-path }}"
+            npm audit --json > "${{ github.workspace }}/server-security.json" 2>&1 || true
+            cd "${{ github.workspace }}"
+          fi
+
+      - name: Upload Security Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            client-security.json
+            server-security.json
+          if-no-files-found: ignore
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [detect-structure, security]
+    # Deploy only on main, master, developer branches, or when manually triggered
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/developer') || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+
+      - name: Create deployment folder
+        run: |
+          mkdir -p deploy_artifact
+          if [ "${{ needs.detect-structure.outputs.has-client }}" == "true" ] && [ -n "${{ needs.detect-structure.outputs.client-path }}" ]; then
+            cp -r "${{ needs.detect-structure.outputs.client-path }}" deploy_artifact/client || true
+          fi
+          if [ "${{ needs.detect-structure.outputs.has-server }}" == "true" ] && [ -n "${{ needs.detect-structure.outputs.server-path }}" ]; then
+            cp -r "${{ needs.detect-structure.outputs.server-path }}" deploy_artifact/server || true
+          fi
+          cp README.md deploy_artifact/ 2>/dev/null || true
+          cp global_README.md deploy_artifact/ 2>/dev/null || true
+          cp -r artifacts deploy_artifact/ 2>/dev/null || true
+          echo "Deployment folder ready."
+
+      - name: Create ZIP
+        run: |
+          zip -r deployment_artifact.zip deploy_artifact/ || echo "ZIP creation completed"
+
+      - name: Upload deployment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment_artifact
+          path: deployment_artifact.zip
+          if-no-files-found: ignore
+

@@ -1,8 +1,7 @@
 # Dependencies
 node_modules/
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
+# Note: package-lock.json files are committed for CI/CD caching
+# Only ignore lockfiles in node_modules (handled by node_modules/ above)
 
 # Build outputs
 dist/

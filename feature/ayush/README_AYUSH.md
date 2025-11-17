@@ -1,5 +1,18 @@
 # Ayush's Feature Branch
 
+<!-- CON-18: Workflow Status Badges -->
+[![Backend CI](https://github.com/USERNAME/REPO/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/USERNAME/REPO/actions/workflows/backend-ci.yml)
+[![Frontend CI](https://github.com/USERNAME/REPO/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/USERNAME/REPO/actions/workflows/frontend-ci.yml)
+[![Deploy](https://github.com/USERNAME/REPO/actions/workflows/deploy.yml/badge.svg)](https://github.com/USERNAME/REPO/actions/workflows/deploy.yml)
+[![codecov](https://codecov.io/gh/USERNAME/REPO/branch/main/graph/badge.svg)](https://codecov.io/gh/USERNAME/REPO)
+
+## CI/CD Status
+
+- **Backend CI**: Automated linting, type checking, testing, and building
+- **Frontend CI**: Automated linting, type checking, testing, and building  
+- **Deployment**: Automated deployment to Render on main branch
+- **Coverage**: Code coverage reporting via Codecov
+
 ## Tasks Implemented
 - **CON-17**: Backend environment setup (Node.js + TypeScript)
 - **CON-18**: Full CI/CD pipeline (GitHub Actions)
