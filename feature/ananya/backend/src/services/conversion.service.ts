@@ -29,13 +29,22 @@ export class ConversionService {
 
   /**
    * Convert file using appropriate tool based on formats
+   * Logs conversion start/end events and performance metrics
    */
   async convert(options: ConversionOptions): Promise<string> {
     const { sourceFormat, targetFormat, inputPath, ocrEnabled = false } = options;
     const outputPath = options.outputPath || this.generateOutputPath(inputPath, targetFormat);
     let tempFiles: string[] = [];
+    const startTime = Date.now();
+    const conversionId = uuidv4().substring(0, 8);
 
-    logger.info('Starting conversion', { sourceFormat, targetFormat, inputPath });
+    logger.info('Conversion started', { 
+      conversionId,
+      sourceFormat, 
+      targetFormat, 
+      inputPath,
+      ocrEnabled 
+    });
 
     try {
       let result: string;
@@ -62,12 +71,51 @@ export class ConversionService {
 
       // Cleanup temp files after successful conversion
       await this.cleanupTempFiles(tempFiles);
+      
+      const duration = Date.now() - startTime;
+      const fileSize = await this.getFileSize(result);
+      
+      logger.info('Conversion completed successfully', {
+        conversionId,
+        sourceFormat,
+        targetFormat,
+        inputPath,
+        outputPath: result,
+        duration: `${duration}ms`,
+        fileSize,
+        performance: {
+          durationMs: duration,
+          durationSeconds: (duration / 1000).toFixed(2),
+        }
+      });
+      
       return result;
     } catch (error) {
-      logger.error('Conversion failed', { error, sourceFormat, targetFormat });
+      const duration = Date.now() - startTime;
+      logger.error('Conversion failed', { 
+        conversionId,
+        error: error instanceof Error ? error.message : String(error),
+        sourceFormat, 
+        targetFormat,
+        inputPath,
+        duration: `${duration}ms`,
+        stack: error instanceof Error ? error.stack : undefined
+      });
       // Cleanup temp files even on error
       await this.cleanupTempFiles(tempFiles);
       throw error;
+    }
+  }
+
+  /**
+   * Get file size in bytes
+   */
+  private async getFileSize(filePath: string): Promise<number> {
+    try {
+      const stats = await fs.stat(filePath);
+      return stats.size;
+    } catch {
+      return 0;
     }
   }
 
@@ -87,12 +135,15 @@ export class ConversionService {
 
   /**
    * CON-2: Convert using LibreOffice
+   * Logs conversion progress and performance
    */
   private async convertWithLibreOffice(
     inputPath: string,
     outputPath: string,
     targetFormat: string
   ): Promise<string> {
+    const startTime = Date.now();
+    logger.info('LibreOffice conversion started', { inputPath, targetFormat, outputPath });
     const formatMap: Record<string, string> = {
       pdf: 'pdf',
       docx: 'docx',
@@ -134,25 +185,38 @@ export class ConversionService {
         // File might already be at outputPath
       }
 
-      logger.info('LibreOffice conversion completed', { finalOutput });
+      const duration = Date.now() - startTime;
+      logger.info('LibreOffice conversion completed', { 
+        finalOutput, 
+        duration: `${duration}ms`,
+        performance: { durationMs: duration }
+      });
       return finalOutput;
     } catch (error) {
-      logger.error('LibreOffice conversion failed', { error });
+      const duration = Date.now() - startTime;
+      logger.error('LibreOffice conversion failed', { 
+        error: error instanceof Error ? error.message : String(error),
+        inputPath,
+        targetFormat,
+        duration: `${duration}ms`
+      });
       throw new Error(`LibreOffice conversion failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   /**
    * CON-2: Convert using ImageMagick
+   * Logs conversion progress and performance
    */
   private async convertWithImageMagick(
     inputPath: string,
     outputPath: string,
     targetFormat: string
   ): Promise<string> {
+    const startTime = Date.now();
     const command = `convert "${inputPath}" "${outputPath}"`;
 
-    logger.info('Running ImageMagick conversion', { command });
+    logger.info('ImageMagick conversion started', { command, inputPath, targetFormat });
 
     try {
       const { stdout, stderr } = await execAsync(command, { timeout: 10000 });
@@ -161,16 +225,28 @@ export class ConversionService {
         logger.warn('ImageMagick stderr', { stderr });
       }
 
-      logger.info('ImageMagick conversion completed', { outputPath });
+      const duration = Date.now() - startTime;
+      logger.info('ImageMagick conversion completed', { 
+        outputPath,
+        duration: `${duration}ms`,
+        performance: { durationMs: duration }
+      });
       return outputPath;
     } catch (error) {
-      logger.error('ImageMagick conversion failed', { error });
+      const duration = Date.now() - startTime;
+      logger.error('ImageMagick conversion failed', { 
+        error: error instanceof Error ? error.message : String(error),
+        inputPath,
+        targetFormat,
+        duration: `${duration}ms`
+      });
       throw new Error(`ImageMagick conversion failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   /**
    * CON-2: Convert using Ghostscript
+   * Logs conversion progress and performance
    */
   private async convertWithGhostscript(
     inputPath: string,
@@ -179,17 +255,28 @@ export class ConversionService {
     targetFormat: string
   ): Promise<string> {
     if (targetFormat === 'pdf') {
+      const startTime = Date.now();
       // Convert to PDF
       const command = `gs -dNOPAUSE -dBATCH -sDEVICE=pdfwrite -sOutputFile="${outputPath}" "${inputPath}"`;
 
-      logger.info('Running Ghostscript PDF conversion', { command });
+      logger.info('Ghostscript PDF conversion started', { command, inputPath });
 
       try {
         await execAsync(command, { timeout: 30000 });
-        logger.info('Ghostscript conversion completed', { outputPath });
+        const duration = Date.now() - startTime;
+        logger.info('Ghostscript conversion completed', { 
+          outputPath,
+          duration: `${duration}ms`,
+          performance: { durationMs: duration }
+        });
         return outputPath;
       } catch (error) {
-        logger.error('Ghostscript conversion failed', { error });
+        const duration = Date.now() - startTime;
+        logger.error('Ghostscript conversion failed', { 
+          error: error instanceof Error ? error.message : String(error),
+          inputPath,
+          duration: `${duration}ms`
+        });
         throw new Error(`Ghostscript conversion failed: ${error instanceof Error ? error.message : String(error)}`);
       }
     } else {
@@ -199,11 +286,13 @@ export class ConversionService {
 
   /**
    * CON-2: Convert using Tesseract OCR
+   * Logs conversion progress and performance
    */
   private async convertWithOCR(inputPath: string, outputPath: string): Promise<string> {
+    const startTime = Date.now();
     const command = `tesseract "${inputPath}" "${outputPath.replace(/\.txt$/, '')}" -l eng`;
 
-    logger.info('Running OCR conversion', { command });
+    logger.info('OCR conversion started', { command, inputPath });
 
     try {
       const { stdout, stderr } = await execAsync(command, { timeout: 30000 });
@@ -214,11 +303,21 @@ export class ConversionService {
 
       // Tesseract adds .txt extension
       const finalPath = outputPath.endsWith('.txt') ? outputPath : `${outputPath}.txt`;
+      const duration = Date.now() - startTime;
       
-      logger.info('OCR conversion completed', { finalPath });
+      logger.info('OCR conversion completed', { 
+        finalPath,
+        duration: `${duration}ms`,
+        performance: { durationMs: duration }
+      });
       return finalPath;
     } catch (error) {
-      logger.error('OCR conversion failed', { error });
+      const duration = Date.now() - startTime;
+      logger.error('OCR conversion failed', { 
+        error: error instanceof Error ? error.message : String(error),
+        inputPath,
+        duration: `${duration}ms`
+      });
       throw new Error(`OCR conversion failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
