@@ -1,5 +1,6 @@
 /**
  * CON-3: Download Controller
+ * Handles file download endpoints with file retrieval by ID and download response headers
  */
 
 import { Request, Response } from 'express';
@@ -13,13 +14,27 @@ const uploadService = new UploadService();
 export class DownloadController {
   /**
    * Download file by ID
+   * Implements downloadFile endpoint with file existence validation
+   * Sets up download response headers for proper file delivery
    */
   async downloadFile(req: Request, res: Response): Promise<void> {
     try {
       const { fileId } = req.params;
+      
+      if (!fileId) {
+        res.status(400).json({
+          success: false,
+          error: 'File ID is required',
+        });
+        return;
+      }
+
+      logger.info('Download request received', { fileId });
+
       const file = await uploadService.getFile(fileId);
 
       if (!file) {
+        logger.warn('File not found for download', { fileId });
         res.status(404).json({
           success: false,
           error: 'File not found',
@@ -29,6 +44,7 @@ export class DownloadController {
 
       // Check if file exists on disk
       if (!fs.existsSync(file.path)) {
+        logger.error('File not found on disk', { fileId, path: file.path });
         res.status(404).json({
           success: false,
           error: 'File not found on disk',
@@ -36,24 +52,87 @@ export class DownloadController {
         return;
       }
 
-      // Set headers
-      const filename = file.originalName || file.filename;
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      // Set secure download headers with proper Content-Disposition
+      const filename = encodeURIComponent(file.originalName || file.filename);
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${filename}`);
       res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
-      res.setHeader('Content-Length', file.size.toString());
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'private, max-age=3600');
 
-      // Support range requests for large files
+      // Implement HTTP range request handling for partial content downloads
       const range = req.headers.range;
       if (range) {
-        const fileStream = fs.createReadStream(file.path, { start: 0, end: file.size - 1 });
+        // Parse range header (e.g., "bytes=0-1023")
+        const parts = range.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : file.size - 1;
+        const chunkSize = end - start + 1;
+
+        // Validate range
+        if (start >= file.size || end >= file.size || start > end) {
+          res.status(416).setHeader('Content-Range', `bytes */${file.size}`);
+          res.json({
+            success: false,
+            error: 'Range Not Satisfiable',
+          });
+          return;
+        }
+
+        // Set partial content headers
+        res.status(206); // Partial Content
+        res.setHeader('Content-Range', `bytes ${start}-${end}/${file.size}`);
+        res.setHeader('Content-Length', chunkSize.toString());
+
+        // Stream partial content
+        const fileStream = fs.createReadStream(file.path, { start, end });
+        
+        fileStream.on('error', (error) => {
+          logger.error('File stream error', { fileId, error: error.message });
+          if (!res.headersSent) {
+            res.status(500).json({
+              success: false,
+              error: 'File stream error',
+            });
+          }
+        });
+
         fileStream.pipe(res);
+
+        logger.info('Partial content download', {
+          fileId,
+          range: `${start}-${end}`,
+          chunkSize,
+        });
       } else {
-        // Stream file
+        // Full file download - optimized for large file downloads
+        res.setHeader('Content-Length', file.size.toString());
         const fileStream = fs.createReadStream(file.path);
+        
+        fileStream.on('error', (error) => {
+          logger.error('File stream error', { fileId, error: error.message });
+          if (!res.headersSent) {
+            res.status(500).json({
+              success: false,
+              error: 'File stream error',
+            });
+          }
+        });
+
         fileStream.pipe(res);
       }
 
-      logger.info('File downloaded', { fileId, filename });
+      // Add download logging with performance metrics
+      const downloadStartTime = Date.now();
+      res.on('finish', () => {
+        const downloadDuration = Date.now() - downloadStartTime;
+        logger.info('File downloaded successfully', {
+          fileId,
+          filename: file.originalName,
+          size: file.size,
+          duration: `${downloadDuration}ms`,
+          downloadSpeed: `${(file.size / downloadDuration * 1000 / 1024).toFixed(2)} KB/s`,
+        });
+      });
     } catch (error) {
       logger.error('Download failed', { error });
       if (!res.headersSent) {
@@ -67,13 +146,27 @@ export class DownloadController {
 
   /**
    * Stream file (for preview)
+   * Implements file streaming without download for inline file viewing
+   * Supports preview of images, PDFs, and other viewable formats
    */
   async streamFile(req: Request, res: Response): Promise<void> {
     try {
       const { fileId } = req.params;
+      
+      if (!fileId) {
+        res.status(400).json({
+          success: false,
+          error: 'File ID is required',
+        });
+        return;
+      }
+
+      logger.info('Stream request received', { fileId });
+
       const file = await uploadService.getFile(fileId);
 
       if (!file) {
+        logger.warn('File not found for streaming', { fileId });
         res.status(404).json({
           success: false,
           error: 'File not found',
@@ -82,6 +175,7 @@ export class DownloadController {
       }
 
       if (!fs.existsSync(file.path)) {
+        logger.error('File not found on disk for streaming', { fileId, path: file.path });
         res.status(404).json({
           success: false,
           error: 'File not found on disk',
@@ -89,17 +183,43 @@ export class DownloadController {
         return;
       }
 
+      // Set proper content headers for inline viewing
       res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
       res.setHeader('Content-Length', file.size.toString());
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(file.originalName || file.filename)}"`);
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
 
+      // Implement file streaming without download
       const fileStream = fs.createReadStream(file.path);
+      
+      fileStream.on('error', (error) => {
+        logger.error('File stream error', { fileId, error: error.message });
+        if (!res.headersSent) {
+          res.status(500).json({
+            success: false,
+            error: 'File stream error',
+          });
+        }
+      });
+
       fileStream.pipe(res);
+
+      logger.info('File streaming started', {
+        fileId,
+        filename: file.originalName,
+        mimeType: file.mimeType,
+      });
     } catch (error) {
-      logger.error('Stream failed', { error });
+      logger.error('Stream failed', { 
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
       if (!res.headersSent) {
         res.status(500).json({
           success: false,
           error: 'Stream failed',
+          message: error instanceof Error ? error.message : 'Unknown error',
         });
       }
     }
