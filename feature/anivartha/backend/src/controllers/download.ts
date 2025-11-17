@@ -52,24 +52,41 @@ export class DownloadController {
         return;
       }
 
-      // Set download headers
-      const filename = file.originalName || file.filename;
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      // Set secure download headers with proper Content-Disposition
+      const filename = encodeURIComponent(file.originalName || file.filename);
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${filename}`);
       res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
       res.setHeader('Content-Length', file.size.toString());
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'private, max-age=3600');
 
-      // Support range requests for large files
-      const range = req.headers.range;
-      if (range) {
-        const fileStream = fs.createReadStream(file.path, { start: 0, end: file.size - 1 });
-        fileStream.pipe(res);
-      } else {
-        // Stream file
-        const fileStream = fs.createReadStream(file.path);
-        fileStream.pipe(res);
-      }
+      // Implement file streaming for efficient large file downloads
+      const fileStream = fs.createReadStream(file.path);
+      
+      fileStream.on('error', (error) => {
+        logger.error('File stream error', { fileId, error: error.message });
+        if (!res.headersSent) {
+          res.status(500).json({
+            success: false,
+            error: 'File stream error',
+          });
+        }
+      });
 
-      logger.info('File downloaded', { fileId, filename });
+      fileStream.pipe(res);
+
+      // Add download logging with performance metrics
+      const downloadStartTime = Date.now();
+      res.on('finish', () => {
+        const downloadDuration = Date.now() - downloadStartTime;
+        logger.info('File downloaded successfully', {
+          fileId,
+          filename: file.originalName,
+          size: file.size,
+          duration: `${downloadDuration}ms`,
+          downloadSpeed: `${(file.size / downloadDuration * 1000 / 1024).toFixed(2)} KB/s`,
+        });
+      });
     } catch (error) {
       logger.error('Download failed', { error });
       if (!res.headersSent) {
