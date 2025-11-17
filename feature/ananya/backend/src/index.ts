@@ -76,12 +76,22 @@ const startServer = () => {
     });
   });
 
-  // CON-11: Start log retention service
+  // CON-11: Start log retention service with scheduled archival
   const logRetentionService = new LogRetentionService({
     retentionDays: parseInt(process.env.LOG_RETENTION_DAYS || '365', 10),
     logDirectory: path.join(process.cwd(), 'logs'),
   });
-  logRetentionService.startScheduledArchival();
+  
+  // Start scheduled archival (runs daily)
+  // Configure interval from environment or use default 24 hours
+  const archivalIntervalHours = parseInt(process.env.LOG_ARCHIVAL_INTERVAL_HOURS || '24', 10);
+  const archivalIntervalMs = archivalIntervalHours * 60 * 60 * 1000;
+  logRetentionService.startScheduledArchival(archivalIntervalMs);
+  
+  logger.info('Log retention service initialized', {
+    retentionDays: parseInt(process.env.LOG_RETENTION_DAYS || '365', 10),
+    archivalIntervalHours
+  });
 
   // Graceful shutdown
   process.on('SIGTERM', () => {

@@ -258,23 +258,68 @@ export class LogRetentionService {
 
   /**
    * Start scheduled archival (runs daily)
+   * Configures daily archival job and integrates with server startup
+   * Includes archival statistics tracking
    */
   startScheduledArchival(intervalMs: number = 24 * 60 * 60 * 1000): void {
-    logger.info('Starting scheduled log archival', { intervalMs });
-
-    // Run immediately
-    this.archiveOldLogs().catch((error) => {
-      logger.error('Scheduled archival error', { error });
+    const intervalHours = Math.floor(intervalMs / (60 * 60 * 1000));
+    logger.info('Starting scheduled log archival', { 
+      intervalMs, 
+      intervalHours,
+      retentionDays: this.config.retentionDays,
+      logDirectory: this.config.logDirectory,
+      archiveDirectory: this.config.archiveDirectory
     });
 
-    // Then run on interval
-    setInterval(() => {
+    // Run immediately on startup
+    this.archiveOldLogs()
+      .then(() => this.deleteOldArchivedLogs())
+      .then(() => {
+        logger.info('Initial log archival completed on startup');
+      })
+      .catch((error) => {
+        logger.error('Initial scheduled archival error', { error });
+      });
+
+    // Then run on interval (daily by default)
+    const intervalId = setInterval(() => {
+      const startTime = Date.now();
+      logger.info('Starting scheduled log archival cycle');
+      
       this.archiveOldLogs()
         .then(() => this.deleteOldArchivedLogs())
+        .then(async () => {
+          const duration = Date.now() - startTime;
+          const stats = await this.getRetentionStats();
+          logger.info('Scheduled log archival cycle completed', {
+            duration: `${duration}ms`,
+            stats
+          });
+        })
         .catch((error) => {
-          logger.error('Scheduled archival error', { error });
+          logger.error('Scheduled archival error', { 
+            error: error instanceof Error ? error.message : String(error)
+          });
         });
     }, intervalMs);
+
+    // Store interval ID for potential cleanup
+    (this as any).archivalIntervalId = intervalId;
+    
+    logger.info('Scheduled log archival configured', {
+      nextRun: new Date(Date.now() + intervalMs).toISOString(),
+      intervalHours
+    });
+  }
+
+  /**
+   * Stop scheduled archival
+   */
+  stopScheduledArchival(): void {
+    if ((this as any).archivalIntervalId) {
+      clearInterval((this as any).archivalIntervalId);
+      logger.info('Stopped scheduled log archival');
+    }
   }
 }
 
